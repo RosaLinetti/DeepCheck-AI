@@ -1,40 +1,97 @@
-from fastapi import APIRouter
+# app/api/routes.py
+from fastapi import APIRouter, HTTPException
 
-from app.api.schemas import AnalyzeRequest, AnalyzeResponse
+from app.api.schemas import (
+    AnalyzeRequest,
+    DocumentAnalyzeRequest,
+    DocumentAnalyzeResponse,
+)
 
-from app.services.embedding_service import generate_embedding
-from app.services.similarity_service import calculate_similarity
+from app.services.chunking_service import get_chunks
+from app.services.similarity_service import (
+    compute_similarity,
+    compute_chunk_similarity_matrix,
+    compute_aggregate_scores,
+)
 
 router = APIRouter()
 
 
 @router.get("/health")
 async def health():
-
     return {"status": "ok"}
 
 
 @router.get("/")
 async def root():
-
     return {"message": "DeepCheck API is running"}
 
 
-@router.post("/analyze", response_model=AnalyzeResponse)
+# ---------------------------------------------------------
+# BASIC TEXT-TO-TEXT SIMILARITY ENDPOINT
+# ---------------------------------------------------------
+
+@router.post("/analyze")
 async def analyze(payload: AnalyzeRequest):
+    """
+    Legacy endpoint — compares text blocks as whole strings.
+    """
+    try:
+        # FIX: Uses the updated compute_similarity function under the hood
+        similarity_score = compute_similarity(payload.text1, payload.text2)
+        similarity_percentage = round(similarity_score * 100, 2)
 
-    embedding1 = generate_embedding(payload.text1)
+        return {
+            "similarity_score": similarity_percentage,
+            "message": "Semantic similarity analysis completed."
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-    embedding2 = generate_embedding(payload.text2)
 
-    similarity_score = calculate_similarity(
-        embedding1,
-        embedding2
-    )
+# ---------------------------------------------------------
+# DOCUMENT-LEVEL CHUNK ANALYSIS ENDPOINT
+# ---------------------------------------------------------
 
-    similarity_percentage = round(similarity_score * 100, 2)
+@router.post(
+    "/document/analyze",
+    response_model=DocumentAnalyzeResponse
+)
+async def analyze_documents(request: DocumentAnalyzeRequest):
+    """
+    Chunk-based plagiarism detection pipeline.
+    """
+    try:
+        source_chunks = get_chunks(
+            text=request.source_document,
+            strategy=request.chunk_strategy,
+            window_size=request.window_size,
+            overlap=request.overlap,
+        )
 
-    return AnalyzeResponse(
-        similarity_score=similarity_percentage,
-        message="Semantic similarity analysis completed."
-    )
+        suspicious_chunks = get_chunks(
+            text=request.suspicious_document,
+            strategy=request.chunk_strategy,
+            window_size=request.window_size,
+            overlap=request.overlap,
+        )
+
+        matches = compute_chunk_similarity_matrix(
+            source_chunks,
+            suspicious_chunks
+        )
+
+        aggregates = compute_aggregate_scores(matches)
+
+        return DocumentAnalyzeResponse(
+            chunk_strategy=request.chunk_strategy,
+            total_suspicious_chunks=len(suspicious_chunks),
+            overall_similarity=aggregates["overall_similarity"],
+            max_similarity=aggregates["max_similarity"],
+            chunk_matches=matches,
+        )
+        
+    except ValueError as val_err:
+        raise HTTPException(status_code=400, detail=str(val_err))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Pipeline error: {str(e)}")

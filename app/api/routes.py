@@ -1,4 +1,5 @@
 # app/api/routes.py
+import numpy as np
 from fastapi import APIRouter, HTTPException
 
 from app.api.schemas import (

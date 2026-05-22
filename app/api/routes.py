@@ -17,6 +17,16 @@ from app.services.similarity_service import (
 router = APIRouter()
 
 
+def cosine_similarity(v1, v2):
+    v1 = np.array(v1)
+    v2 = np.array(v2)
+
+    return float(
+        np.dot(v1, v2) /
+        (np.linalg.norm(v1) * np.linalg.norm(v2))
+    )
+
+
 @router.get("/health")
 async def health():
     return {"status": "ok"}

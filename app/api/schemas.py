@@ -79,7 +79,8 @@ class ChunkMatch(BaseModel):
     best_match_source_index: int
     best_match_source_text: str
     similarity_score: float = Field(..., ge=0.0, le=1.0)
-
+    verdict: str  # "plagiarised", "suspicious", or "original"
+    confidence: float = Field(..., ge=0.0, le=1.0)
 
 class DocumentAnalyzeResponse(BaseModel):
     """

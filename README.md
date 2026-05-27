@@ -76,6 +76,37 @@ curl -X POST "http://127.0.0.1:8000/document/analyze/upload" \
 }
 ```
 
+### `POST /document/analyze/unified`
+**Purpose**: Unified endpoint for frontend integration. Each input side (source & suspicious) can be supplied as **either** plain text **or** a file upload — mix and match freely. If both text and file are provided for the same side, the file takes priority.
+
+**Accepted Combinations**:
+| Source Input | Suspicious Input | Fields to Send |
+|---|---|---|
+| Text | Text | `source_text` + `suspicious_text` |
+| File | File | `source_file` + `suspicious_file` |
+| Text | File | `source_text` + `suspicious_file` |
+| File | Text | `source_file` + `suspicious_text` |
+
+**Example Request — Text vs File (Bash)**:
+```bash
+curl -X POST "http://127.0.0.1:8000/document/analyze/unified" \
+  -H "accept: application/json" \
+  -F "source_text=The core logic revolves around breaking documents into smaller segments." \
+  -F "suspicious_file=@suspect.pdf" \
+  -F "chunk_strategy=sentence"
+```
+
+**Example Request — File vs File (Bash)**:
+```bash
+curl -X POST "http://127.0.0.1:8000/document/analyze/unified" \
+  -H "accept: application/json" \
+  -F "source_file=@original.pdf" \
+  -F "suspicious_file=@suspect.docx" \
+  -F "chunk_strategy=sentence"
+```
+
+**Response format**: Same as `/document/analyze/upload` (see example output above).
+
 ### `POST /document/analyze`
 **Purpose**: Direct text-based chunk analysis (no file upload required). 
 

@@ -1,5 +1,5 @@
-fastapi>=0.115.0
-uvicorn[standard]>=0.32.0
+fastapi
+uvicorn[standard]
 python-multipart
 
 sentence-transformers
@@ -12,6 +12,6 @@ PyPDF2
 python-docx
 
 #for frontend
-streamlit>=1.35.0
+streamlit
 requests
 plotly

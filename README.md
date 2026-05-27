@@ -27,16 +27,22 @@ DeepCheck-AI is an AI-powered semantic plagiarism detection API designed to iden
    source .venv/bin/activate
    ```
 
-3. **Install dependencies**:
+3. **Install dependencies** *(covers both backend and frontend)*:
    ```bash
    pip install -r requirements.txt
    ```
 
-4. **Start the server**:
+4. **Start the backend server**:
    ```bash
    uvicorn app.api.main:app --reload
    ```
-   *The server runs on `http://127.0.0.1:8000`. You can test endpoints via Swagger UI at `http://127.0.0.1:8000/docs`.*
+   *The API runs on `http://127.0.0.1:8000`. You can test endpoints via Swagger UI at `http://127.0.0.1:8000/docs`.*
+
+5. **Start the frontend** *(in a separate terminal)*:
+   ```bash
+   streamlit run frontend/app.py
+   ```
+   *The Streamlit UI opens automatically at `http://localhost:8501`. Make sure the backend server is already running.*
 
 ---
 

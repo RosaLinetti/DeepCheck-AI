@@ -8,14 +8,14 @@ from typing import List, Optional
 from pydantic import BaseModel, Field, model_validator
 
 
-# ── Enums ─────────────────────────────────────────────────────────────────────
+# Enums
 
 class ChunkStrategy(str, Enum):
     SENTENCE = "sentence"
     SLIDING_WINDOW = "sliding_window"
 
 
-# ── Request Models ─────────────────────────────────────────────────────────────
+# Request Models
 
 class AnalyzeRequest(BaseModel):
     """
@@ -70,7 +70,7 @@ class DocumentAnalyzeRequest(BaseModel):
         return self
 
 
-# ── Response Models ────────────────────────────────────────────────────────────
+# Response Models
 
 class ChunkMatch(BaseModel):
     """Represents a single suspicious chunk matched against the source."""

@@ -161,7 +161,7 @@ async def parse_uploaded_file(
     DocumentParseError
         If the file is too large, unsupported, or cannot be parsed.
     """
-    # ── Size guard ──────────────────────────────────────────────────────
+    # Size guard
     if len(file_bytes) > MAX_FILE_SIZE_BYTES:
         size_mb = len(file_bytes) / (1024 * 1024)
         raise DocumentParseError(
@@ -169,10 +169,10 @@ async def parse_uploaded_file(
             f"Maximum allowed size is {MAX_FILE_SIZE_BYTES // (1024 * 1024)} MB."
         )
 
-    # ── Format detection ────────────────────────────────────────────────
+    # Format detection
     fmt = detect_format(filename, content_type)
 
-    # ── Extraction ──────────────────────────────────────────────────────
+    # Extraction
     if fmt == "pdf":
         text = extract_text_from_pdf(file_bytes)
     elif fmt == "docx":

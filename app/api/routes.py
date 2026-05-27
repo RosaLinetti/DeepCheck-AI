@@ -45,9 +45,7 @@ async def root():
     return {"message": "DeepCheck API is running"}
 
 
-# ---------------------------------------------------------
-# BASIC TEXT-TO-TEXT SIMILARITY ENDPOINT
-# ---------------------------------------------------------
+# Basic Text-To-Text Similarity Endpoint
 
 @router.post("/analyze")
 async def analyze(payload: AnalyzeRequest):
@@ -67,9 +65,7 @@ async def analyze(payload: AnalyzeRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ---------------------------------------------------------
-# DOCUMENT-LEVEL CHUNK ANALYSIS ENDPOINT
-# ---------------------------------------------------------
+# Document-Level Chunk Analysis Endpoint
 
 @router.post(
     "/document/analyze",
@@ -115,9 +111,7 @@ async def analyze_documents(request: DocumentAnalyzeRequest):
         raise HTTPException(status_code=500, detail=f"Pipeline error: {str(e)}")
 
 
-# ---------------------------------------------------------
-# FILE UPLOAD DOCUMENT ANALYSIS ENDPOINT
-# ---------------------------------------------------------
+# File Upload Document Analysis Endpoint
 
 async def _read_upload_file(upload: UploadFile) -> bytes:
     """
@@ -223,9 +217,7 @@ async def analyze_uploaded_documents(
         raise HTTPException(status_code=500, detail=f"Pipeline error: {str(e)}")
 
 
-# ---------------------------------------------------------
-# UNIFIED ENDPOINT — accepts any mix of text / file inputs
-# ---------------------------------------------------------
+# Unified Endpoint - accepts any mix of text / file inputs
 
 async def _resolve_input(
     text: Optional[str],

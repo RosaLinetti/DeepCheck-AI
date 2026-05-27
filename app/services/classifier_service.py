@@ -11,7 +11,7 @@ from sklearn.preprocessing import StandardScaler
 from typing import Tuple
 
 
-# ── Training Data ──────────────────────────────────────────────────────────────
+# Training Data
 # Each row: [cosine_score, length_ratio, lexical_overlap]
 # Labels:   0 = original, 1 = suspicious, 2 = plagiarised
 
@@ -48,7 +48,7 @@ TRAINING_LABELS = np.array([
 LABEL_MAP = {0: "original", 1: "suspicious", 2: "plagiarised"}
 
 
-# ── Model ──────────────────────────────────────────────────────────────────────
+# Model
 
 class PlagiarismClassifier:
     def __init__(self):

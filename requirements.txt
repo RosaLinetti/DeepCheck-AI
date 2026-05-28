@@ -11,6 +11,8 @@ numpy
 PyPDF2
 python-docx
 
+chromadb
+
 #for frontend
 streamlit
 requests

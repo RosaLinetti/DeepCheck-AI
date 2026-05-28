@@ -44,6 +44,7 @@ DeepCheck-AI is an AI-powered semantic plagiarism detection API designed to iden
    ```
    *The Streamlit UI opens automatically at `http://localhost:8501`. Make sure the backend server is already running.*
 
+( the frontend is still under construction pdf parsing is incomplete)
 ---
 
 ## 2. Endpoints

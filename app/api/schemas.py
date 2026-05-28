@@ -1,6 +1,7 @@
 """
 Pydantic Schemas — DeepCheck-AI
 Validates incoming API request bodies and structures outgoing responses.
+Unified with Vector Database support.
 """
 
 from enum import Enum
@@ -82,19 +83,38 @@ class ChunkMatch(BaseModel):
     verdict: str  # "plagiarised", "suspicious", or "original"
     confidence: float = Field(..., ge=0.0, le=1.0)
 
+    # ── NEW DATABASE TRACE FIELDS ────────────────────────────────────────────
+    # Setting defaults ensures your partner's existing 1-vs-1 endpoints won't crash
+    source_filename: Optional[str] = Field(default="Direct Upload Input")
+    source_document_id: Optional[str] = Field(default="N/A")
+
+
 class DocumentAnalyzeResponse(BaseModel):
     """
     Full pipeline response returned by /document/analyze.
-
-    Fields:
-        chunk_strategy:         Strategy used for this analysis run.
-        total_suspicious_chunks: Total number of chunks extracted from suspicious doc.
-        overall_similarity:     Mean similarity across all suspicious chunks.
-        max_similarity:         Highest single-chunk similarity score detected.
-        chunk_matches:          Per-chunk comparison details (index, text, score).
     """
     chunk_strategy: ChunkStrategy
     total_suspicious_chunks: int
     overall_similarity: float
     max_similarity: float
     chunk_matches: List[ChunkMatch]
+
+    # ── NEW DATABASE TRACE FIELDS ────────────────────────────────────────────
+    knowledge_base_chunks_searched: Optional[int] = Field(default=0)
+
+
+# ── NEW CHROMADB SCHEMAS ──────────────────────────────────────────────────────
+
+class IngestResponse(BaseModel):
+    """Response structure returned following a successful /document/ingest push."""
+    filename: str
+    document_id: str        # UUID assigned to this document reference collection
+    chunks_stored: int
+    chunking_strategy: ChunkStrategy
+
+
+class KnowledgeBaseStats(BaseModel):
+    """Response schema used to display system vector metrics and diagnostics."""
+    collection_name: str
+    total_chunks: int
+    persist_directory: str

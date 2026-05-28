@@ -24,7 +24,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",  # Opened to show navigation modes
 )
 
-# Custom CSS
+# CSS
 st.markdown("""
 <style>
     /* Fonts */
@@ -48,14 +48,13 @@ st.markdown("""
         font-family: 'Space Grotesk', sans-serif;
         font-size: 2.8rem;
         font-weight: 700;
-        background: linear-gradient(135deg, #14b8a6, #2dd4bf, #5eead4);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        /* CHANGED: Removed gradient, made it a simple solid blue */
+        color: #3b82f6;
         margin-bottom: 0.3rem;
         letter-spacing: -1px;
     }
     .hero-header p {
-        color: #7a8ba0;
+        color: #64748b;
         font-size: 1rem;
         font-weight: 400;
         margin-top: 0;
@@ -70,25 +69,28 @@ st.markdown("""
         color: #e2e8f0;
         margin-bottom: 0.8rem;
         padding-bottom: 0.5rem;
-        border-bottom: 2px solid rgba(20, 184, 166, 0.25);
+        /* CHANGED: Simple solid gray border */
+        border-bottom: 2px solid #334155;
     }
 
     /* File lock overlay */
     .file-lock-notice {
-        background: rgba(20, 184, 166, 0.06);
-        border: 1px dashed rgba(20, 184, 166, 0.3);
+        /* CHANGED: Simplified background and border colors */
+        background: #1e293b;
+        border: 1px dashed #475569;
         border-radius: 10px;
         padding: 0.85rem;
         text-align: center;
-        color: #5eead4;
+        color: #94a3b8;
         font-size: 0.88rem;
         margin-top: 0.5rem;
     }
 
     /* KPI metric cards */
     .kpi-card {
-        background: rgba(15, 23, 42, 0.5);
-        border: 1px solid rgba(20, 184, 166, 0.12);
+        /* CHANGED: Simple solid dark background and gray border */
+        background: #1e293b;
+        border: 1px solid #334155;
         border-radius: 14px;
         padding: 1.4rem;
         text-align: center;
@@ -97,7 +99,8 @@ st.markdown("""
     }
     .kpi-card:hover {
         transform: translateY(-3px);
-        box-shadow: 0 8px 24px rgba(20, 184, 166, 0.1);
+        /* CHANGED: Simple subtle gray shadow on hover */
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
     }
     .kpi-label {
         font-family: 'Space Grotesk', sans-serif;
@@ -105,7 +108,7 @@ st.markdown("""
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 1.5px;
-        color: #7a8ba0;
+        color: #64748b;
         margin-bottom: 0.4rem;
     }
     .kpi-value {
@@ -116,11 +119,11 @@ st.markdown("""
     }
     .kpi-sub {
         font-size: 0.76rem;
-        color: #5a6b7d;
+        color: #475569;
         margin-top: 0.25rem;
     }
 
-    /* Verdict badges */
+    /* Verdict badges (Kept clean red/yellow/green for messaging) */
     .verdict-badge {
         display: inline-block;
         padding: 0.2rem 0.7rem;
@@ -131,24 +134,25 @@ st.markdown("""
         letter-spacing: 0.8px;
     }
     .verdict-plagiarised {
-        background: rgba(244, 63, 94, 0.12);
-        color: #fb7185;
-        border: 1px solid rgba(244, 63, 94, 0.25);
+        background: rgba(244, 63, 94, 0.1);
+        color: #f43f5e;
+        border: 1px solid rgba(244, 63, 94, 0.2);
     }
     .verdict-suspicious {
-        background: rgba(251, 191, 36, 0.10);
-        color: #fbbf24;
-        border: 1px solid rgba(251, 191, 36, 0.25);
+        background: rgba(234, 179, 8, 0.1);
+        color: #eab308;
+        border: 1px solid rgba(234, 179, 8, 0.2);
     }
     .verdict-original {
-        background: rgba(52, 211, 153, 0.10);
-        color: #34d399;
-        border: 1px solid rgba(52, 211, 153, 0.25);
+        background: rgba(34, 197, 94, 0.1);
+        color: #22c55e;
+        border: 1px solid rgba(34, 197, 94, 0.2);
     }
 
     /* Analyse button */
     .stButton > button {
-        background: linear-gradient(135deg, #0d9488, #14b8a6) !important;
+        /* CHANGED: Solid blue background with no gradient */
+        background: #3b82f6 !important;
         color: white !important;
         border: none !important;
         border-radius: 10px !important;
@@ -158,18 +162,21 @@ st.markdown("""
         font-size: 0.92rem !important;
         letter-spacing: 0.3px !important;
         transition: all 0.3s ease !important;
-        box-shadow: 0 4px 14px rgba(20, 184, 166, 0.25) !important;
+        /* CHANGED: Simple dark drop shadow */
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2) !important;
     }
     .stButton > button:hover {
-        background: linear-gradient(135deg, #14b8a6, #2dd4bf) !important;
-        box-shadow: 0 6px 22px rgba(20, 184, 166, 0.35) !important;
+        /* CHANGED: Shakes to a slightly darker solid blue on hover */
+        background: #2563eb !important;
+        box-shadow: 0 6px 22px rgba(0, 0, 0, 0.3) !important;
         transform: translateY(-1px) !important;
     }
 
     /* Section divider */
     .section-divider {
         height: 1px;
-        background: linear-gradient(90deg, transparent, rgba(20,184,166,0.2), transparent);
+        /* CHANGED: Plain, subtle gray divider line */
+        background: #334155;
         margin: 2rem 0;
     }
 
@@ -178,7 +185,8 @@ st.markdown("""
         font-family: 'Space Grotesk', sans-serif;
         font-size: 0.72rem;
         font-weight: 600;
-        color: #5eead4;
+        /* CHANGED: Plain solid blue color */
+        color: #3b82f6;
         text-transform: uppercase;
         letter-spacing: 1px;
         margin-bottom: 0.3rem;
@@ -187,8 +195,9 @@ st.markdown("""
         font-size: 0.85rem;
         color: #cbd5e1;
         line-height: 1.55;
-        background: rgba(15, 23, 42, 0.45);
-        border: 1px solid rgba(20, 184, 166, 0.08);
+        /* CHANGED: Flat dark background and minimal gray border */
+        background: #1e293b;
+        border: 1px solid #334155;
         border-radius: 8px;
         padding: 0.7rem 0.9rem;
         margin-bottom: 1rem;
@@ -203,9 +212,8 @@ st.markdown("""
         font-family: 'Space Grotesk', sans-serif;
         font-weight: 700;
         font-size: 1.5rem;
-        background: linear-gradient(135deg, #14b8a6, #2dd4bf);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        /* CHANGED: Plain solid blue color */
+        color: #3b82f6;
     }
 
     /* Chart section headers */
@@ -233,9 +241,7 @@ st.markdown("""
         font-weight: 600 !important;
         font-size: 0.88rem !important;
     }
-</style>
-""", unsafe_allow_html=True)
-
+</style>""", unsafe_allow_html=True)
 
 # Helper Functions
 
@@ -310,7 +316,7 @@ for key in ["results", "source_file_uploaded", "suspicious_file_uploaded", "sear
 
 # SIDEBAR APPLICATION CONTROLS
 with st.sidebar:
-    st.markdown("### 🛠️ System Navigation")
+    st.markdown("System Navigation")
     app_mode = st.radio(
         "Select Operation Mode:",
         options=["1v1 Document Compare", "Database Index Management", "Database Plagiarism Scan"]
@@ -319,28 +325,26 @@ with st.sidebar:
     # Render mini stats board inside sidebar if using DB features
     if app_mode in ["Database Index Management", "Database Plagiarism Scan"]:
         st.markdown("---")
-        st.markdown("#### 📊 Vector Database Status")
+        st.markdown("Vector Database Status")
         stats = get_knowledge_base_stats()
         if stats:
             st.caption(f"**Collection:** `{stats.get('collection_name')}`")
             st.caption(f"**Indexed Chunks:** `{stats.get('total_chunks')}`")
         else:
-            st.caption("🔴 Status: Disconnected from API service")
+            st.caption("Status: Disconnected from API service")
 
 
 # HEADER
 st.markdown("""
 <div class="hero-header">
     <h1>DeepCheck AI</h1>
-    <p>Semantic Plagiarism Detection · Powered by SBERT Transformers</p>
+    <p>Semantic Plagiarism Detection using SBERT Transformers</p>
 </div>
 """, unsafe_allow_html=True)
 st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
 
 
-# ==========================================
-# MODE 1: ORIGINAL 1V1 DOCUMENT COMPARE
-# ==========================================
+#mode 1: 1v1 document compare
 if app_mode == "1v1 Document Compare":
     col_src, col_spacer, col_sus = st.columns([1, 0.05, 1])
 
@@ -397,9 +401,7 @@ if app_mode == "1v1 Document Compare":
     active_results_payload = st.session_state.results
 
 
-# ==========================================
-# MODE 2: DATABASE LIBRARY MANAGEMENT
-# ==========================================
+# mode 2: database index management
 elif app_mode == "Database Index Management":
     st.markdown('<div class="panel-label">Database Management — Add Reference Material</div>', unsafe_allow_html=True)
     
@@ -421,9 +423,7 @@ elif app_mode == "Database Index Management":
     active_results_payload = None
 
 
-# ==========================================
-# MODE 3: KNOWLEDGE BASE SEARCH SCAN
-# ==========================================
+# mode 3: database plagiarism scan
 elif app_mode == "Database Plagiarism Scan":
     st.markdown('<div class="panel-label">1-vs-Many Repository Plagiarism Sweep</div>', unsafe_allow_html=True)
     
@@ -449,9 +449,8 @@ elif app_mode == "Database Plagiarism Scan":
     active_results_payload = st.session_state.search_results
 
 
-# ==========================================
-# UNIFIED RENDER LAYER FOR RESULTS OUTPUT
-# ==========================================
+
+# unified render layer for results output
 if active_results_payload:
     data = active_results_payload
     chunks = data.get("chunk_matches", [])
@@ -586,7 +585,3 @@ if active_results_payload:
             with text_right:
                 st.markdown(f'<div class="chunk-text-label">Best Reference Match Source Found</div>', unsafe_allow_html=True)
                 st.markdown(f'<div class="chunk-text-content">{chunk["best_match_source_text"]}</div>', unsafe_allow_html=True)
-
-# Footer
-st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
-st.markdown('<div style="text-align:center; padding:1rem; color:#5a6b7d; font-size:0.78rem;">DeepCheck AI · Semantic Plagiarism Detection · Powered by SBERT Transformers</div>', unsafe_allow_html=True)

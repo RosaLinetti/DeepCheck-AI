@@ -14,7 +14,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-load_css()
 init_session_state()
 
 st.markdown('<div class="dc-navbar-anchor"></div>', unsafe_allow_html=True)
@@ -50,3 +49,6 @@ else:
     render_library_page()
 
 render_settings_modal()
+
+# Inject CSS last so our rules appear after Streamlit's generated styles
+load_css()

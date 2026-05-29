@@ -16,8 +16,9 @@ from components.shared import (
 
 
 def render_compare_page():
+    st.markdown('<div class="page-compare">', unsafe_allow_html=True)
     # ── Input panels ──────────────────────────────────────────────────────────
-    col_src, col_sus = st.columns(2)
+    col_src, col_sus = st.columns(2, gap="small")
 
     with col_src:
         st.markdown('<div class="panel-label">Reference / source document</div>',
@@ -52,7 +53,7 @@ def render_compare_page():
             ) or None
 
     st.markdown("")
-    _, btn_col = st.columns([5, 1])
+    _, btn_col = st.columns([5, 1], gap="small")
     with btn_col:
         analyse_clicked = st.button("Analyse", use_container_width=True, key="cmp_analyse_btn")
 
@@ -84,6 +85,7 @@ def render_compare_page():
             "🔍", "No results yet",
             "Upload or paste two documents above, then click Analyse.",
         )
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
 def _render_results(data: dict):
@@ -121,7 +123,7 @@ def _render_results(data: dict):
         live_counts[dynamic_verdict(c["similarity_score"])] += 1
 
     # ── Charts ────────────────────────────────────────────────────────────────
-    chart_col, bar_col = st.columns(2)
+    chart_col, bar_col = st.columns(2, gap="small")
 
     with chart_col:
         st.markdown('<div class="chart-header">Verdict distribution</div>',
@@ -229,7 +231,7 @@ def _render_results(data: dict):
     st.markdown("#### Chunk detail explorer")
     st.caption("Expand any segment to view text content and match parameters.")
 
-    f_col1, f_col2 = st.columns([1, 2])
+    f_col1, f_col2 = st.columns([1, 2], gap="small")
     with f_col1:
         verdict_filter = st.multiselect(
             "Filter by verdict",
@@ -273,42 +275,44 @@ def _render_results(data: dict):
         open_key = f"cmp_block_open_{row_id}"
         is_open = st.session_state.get(open_key, False)
 
+        st.markdown('<div class="cmp-toggle-row">', unsafe_allow_html=True)
         if st.button(
             f"{'▼' if is_open else '▶'} Block #{idx} · {sim}% match · {src}",
             key=f"cmp_toggle_{row_id}",
+            use_container_width=True,
         ):
             st.session_state[open_key] = not is_open
             st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
         if st.session_state.get(open_key, False):
-            with st.container(border=True):
-                mc1, mc2, mc3 = st.columns(3)
-                with mc1:
-                    st.markdown(f"**Similarity:** <span style='color:{col};font-weight:700'>{sim}%</span>",
-                                unsafe_allow_html=True)
-                with mc2:
-                    st.markdown(f"**Confidence:** {conf}%")
-                with mc3:
-                    st.markdown(f"**Verdict:** {badge}", unsafe_allow_html=True)
-                st.markdown("")
+            st.markdown('<div class="cmp-block">', unsafe_allow_html=True)
+            mc1, mc2, mc3 = st.columns(3, gap="small")
+            with mc1:
+                st.markdown(
+                    f"**Similarity:** <span style='color:{col};font-weight:700'>{sim}%</span>",
+                    unsafe_allow_html=True,
+                )
+            with mc2:
+                st.markdown(f"**Confidence:** {conf}%")
+            with mc3:
+                st.markdown(f"**Verdict:** {badge}", unsafe_allow_html=True)
+            st.markdown("")
 
-                tl, tr = st.columns(2)
-                with tl:
-                    st.markdown('<div class="chunk-text-label">Submitted text</div>',
-                                unsafe_allow_html=True)
-                    highlighted = _highlight_overlap(
-                        chunk["suspicious_chunk_text"], chunk["best_match_source_text"]
-                    )
-                    st.markdown(f'<div class="chunk-text-content">{highlighted}</div>',
-                                unsafe_allow_html=True)
-                with tr:
-                    st.markdown('<div class="chunk-text-label">Best reference match</div>',
-                                unsafe_allow_html=True)
-                    highlighted_src = _highlight_overlap(
-                        chunk["best_match_source_text"], chunk["suspicious_chunk_text"]
-                    )
-                    st.markdown(f'<div class="chunk-text-content">{highlighted_src}</div>',
-                                unsafe_allow_html=True)
+            tl, tr = st.columns(2, gap="small")
+            with tl:
+                st.markdown('<div class="chunk-text-label">Submitted text</div>', unsafe_allow_html=True)
+                highlighted = _highlight_overlap(
+                    chunk["suspicious_chunk_text"], chunk["best_match_source_text"]
+                )
+                st.markdown(f'<div class="chunk-text-content">{highlighted}</div>', unsafe_allow_html=True)
+            with tr:
+                st.markdown('<div class="chunk-text-label">Best reference match</div>', unsafe_allow_html=True)
+                highlighted_src = _highlight_overlap(
+                    chunk["best_match_source_text"], chunk["suspicious_chunk_text"]
+                )
+                st.markdown(f'<div class="chunk-text-content">{highlighted_src}</div>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
 
 def _highlight_overlap(text: str, other: str) -> str:

@@ -12,8 +12,12 @@ ALLOWED_EXTENSIONS = ["pdf", "txt", "docx"]
 
 def load_css():
     css_path = os.path.join(os.path.dirname(__file__), "..", "assets", "styles.css")
-    with open(css_path) as f:
-        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+    try:
+        with open(css_path) as f:
+            css = f.read()
+        st.markdown(f'<style>{css}</style>', unsafe_allow_html=True)
+    except Exception as e:
+        st.warning(f"Could not load CSS: {e}")
 
 
 def init_session_state():
@@ -43,6 +47,7 @@ def render_settings_modal():
         return
 
     st.markdown('<div class="settings-panel-anchor"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="settings-panel-shell">', unsafe_allow_html=True)
     with st.container():
         st.markdown(
             '<div class="settings-panel-title">Advanced token settings</div>',
@@ -80,6 +85,7 @@ def render_settings_modal():
             )
             if st.session_state.overlap >= st.session_state.window_size:
                 st.error("Overlap must be less than window size.")
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
 # ── API helpers ───────────────────────────────────────────────────────────────
@@ -104,7 +110,8 @@ def call_unified_api(source_text, suspicious_text, source_file, suspicious_file)
         data["suspicious_text"] = suspicious_text
 
     resp = requests.post(UNIFIED_ENDPOINT, data=data, files=files if files else None, timeout=120)
-    resp.raise_for_status()
+    if not resp.ok:
+        raise RuntimeError(f"Analyze failed ({resp.status_code}): {resp.text}")
     return resp.json()
 
 
@@ -113,7 +120,8 @@ def call_chroma_search_api(suspicious_file, top_k: int = 5) -> dict:
     files = {"file": (suspicious_file.name, suspicious_file.getvalue(),
                       suspicious_file.type or "application/octet-stream")}
     resp = requests.post(SEARCH_ENDPOINT, data=data, files=files, timeout=120)
-    resp.raise_for_status()
+    if not resp.ok:
+        raise RuntimeError(f"Scan failed ({resp.status_code}): {resp.text}")
     return resp.json()
 
 
@@ -122,7 +130,8 @@ def call_chroma_ingest_api(file) -> dict:
     files = {"file": (file.name, file.getvalue(),
                       file.type or "application/octet-stream")}
     resp = requests.post(INGEST_ENDPOINT, data=data, files=files, timeout=120)
-    resp.raise_for_status()
+    if not resp.ok:
+        raise RuntimeError(f"Ingest failed ({resp.status_code}): {resp.text}")
     return resp.json()
 
 
@@ -170,6 +179,39 @@ def render_empty_state(icon: str, title: str, body: str):
         <h3>{title}</h3>
         <p>{body}</p>
     </div>""", unsafe_allow_html=True)
+
+
+def render_db_status_cards(stats: dict | None, title: str = "Vector database status"):
+    if not stats:
+        st.warning(
+            "Cannot reach the backend — make sure the API server is running on port 8000.",
+            icon="⚠️",
+        )
+        return
+
+    total_chunks = stats.get("total_chunks", "—")
+    collection_name = stats.get("collection_name", "—")
+
+    st.markdown(f'<div class="panel-label">{title}</div>', unsafe_allow_html=True)
+    st.markdown(
+        f"""
+        <div class="db-stat-grid">
+            <div class="db-stat-card">
+                <div class="db-stat-label">Collection</div>
+                <div class="db-stat-value db-stat-mono">{collection_name}</div>
+            </div>
+            <div class="db-stat-card">
+                <div class="db-stat-label">Indexed chunks</div>
+                <div class="db-stat-strong">{total_chunks}</div>
+            </div>
+            <div class="db-stat-card">
+                <div class="db-stat-label">Status</div>
+                <div class="db-stat-value db-stat-ok">Connected ✓</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def render_kpi_cards(overall_sim: float, max_sim: float, total_chunks: int):

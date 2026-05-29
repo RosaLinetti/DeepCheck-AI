@@ -6,31 +6,16 @@ from components.shared import (
     get_knowledge_base_stats,
     render_empty_state,
     render_file_chip,
+    render_db_status_cards,
 )
 
 
 def render_library_page():
-    st.markdown('<div class="panel-label">Vector database status</div>',
-                unsafe_allow_html=True)
-
     stats = get_knowledge_base_stats()
-
-    if stats:
-        s1, s2, s3 = st.columns(3)
-        with s1:
-            st.metric("Collection", stats.get("collection_name", "—"))
-        with s2:
-            st.metric("Indexed chunks", stats.get("total_chunks", 0))
-        with s3:
-            st.metric("Status", "Connected ✓")
-    else:
-        st.warning(
-            "Cannot reach the backend — make sure the API server is running on port 8000.",
-            icon="⚠️",
-        )
+    render_db_status_cards(stats)
 
     st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
-    st.markdown('<div class="panel-label">Add reference document</div>',
+    st.markdown('<div class="panel-label upload-label">Add reference document</div>',
                 unsafe_allow_html=True)
     st.caption(
         "Documents indexed here are permanently stored in ChromaDB and will be "

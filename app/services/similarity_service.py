@@ -39,7 +39,7 @@ def _compute_multi_feature_score(
         w_lexical * lexical_overlap
     )
 
-    return float(round(final_score, 4))
+    return float(round(min(1.0, max(0.0, final_score)), 4))
 
 
 def _get_adaptive_verdict(

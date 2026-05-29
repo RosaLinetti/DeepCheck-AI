@@ -29,6 +29,10 @@ embedding_service = EmbeddingService()
 router = APIRouter()
 
 
+def _clamp_similarity_score(score: float) -> float:
+    return float(min(1.0, max(0.0, score)))
+
+
 # ---------------------------
 # UTILS
 # ---------------------------
@@ -189,7 +193,7 @@ async def analyze_documents(
                     suspicious_chunk_text=s_chunk,
                     best_match_source_index=best_idx,
                     best_match_source_text=best_match,
-                    similarity_score=round(hybrid, 6),
+                        similarity_score=round(_clamp_similarity_score(hybrid), 6),
                     verdict=verdict,
                     confidence=round(confidence, 6),
                     source_filename="hybrid_input",
@@ -306,7 +310,7 @@ async def analyze_db(
                         suspicious_chunk_text=chunk,
                         best_match_source_index=0,
                         best_match_source_text=ref,
-                        similarity_score=round(hybrid, 6),
+                        similarity_score=round(_clamp_similarity_score(hybrid), 6),
                         verdict=verdict,
                         confidence=round(confidence, 6),
                         source_filename=file.filename,

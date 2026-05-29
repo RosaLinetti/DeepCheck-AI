@@ -218,3 +218,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ChromaDB local storage
+chroma/
+chromadb/
+*.sqlite
+*.db
+*.parquet

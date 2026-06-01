@@ -115,8 +115,15 @@ def call_unified_api(source_text, suspicious_text, source_file, suspicious_file)
     return resp.json()
 
 
+
 def call_chroma_search_api(suspicious_file, top_k: int = 5) -> dict:
-    data  = {"chunk_strategy": st.session_state.chunk_strategy, "top_k": top_k}
+    data = {
+        "chunk_strategy": st.session_state.chunk_strategy,
+        "top_k": top_k,
+    }
+    if st.session_state.chunk_strategy == "sliding_window":
+        data["window_size"] = st.session_state.window_size
+        data["overlap"]     = st.session_state.overlap
     files = {"file": (suspicious_file.name, suspicious_file.getvalue(),
                       suspicious_file.type or "application/octet-stream")}
     resp = requests.post(SEARCH_ENDPOINT, data=data, files=files, timeout=120)

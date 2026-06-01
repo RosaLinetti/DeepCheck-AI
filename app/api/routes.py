@@ -1,6 +1,7 @@
 # app/api/routes.py
 import numpy as np
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Query
+from app.services.chroma_service import get_all_documents
 from typing import Optional
 
 from app.api.schemas import (
@@ -20,6 +21,7 @@ from app.services.chroma_service import (
     add_document_chunks,
     query_similar_chunks,
     get_collection_stats,
+    document_already_exists,
 )
 
 from app.services.embedding_service import EmbeddingService
@@ -232,19 +234,44 @@ def stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ---------------------------
-# INGEST DOCUMENT
-# ---------------------------
 @router.post("/document/ingest", response_model=IngestResponse)
-async def ingest(file: UploadFile = File(...), chunk_strategy: str = Form("sentence")):
+async def ingest(
+    file: UploadFile = File(...),
+    chunk_strategy: str = Form("sentence")
+):
     try:
+        # Check if file already exists
+        if document_already_exists(file.filename):
+            raise HTTPException(
+                status_code=409,
+                detail=f"{file.filename} already exists in ChromaDB"
+            )
+
         file_bytes = await _read_upload_file(file)
-        text = await parse_uploaded_file(file_bytes, file.filename, file.content_type)
 
+        text = await parse_uploaded_file(
+            file_bytes,
+            file.filename,
+            file.content_type
+        )
+        from app.services.chroma_service import (
+    generate_file_hash,
+    document_already_exists,
+)
+
+        file_hash = generate_file_hash(text)
         chunks = get_chunks(text, chunk_strategy)
-        embeddings = embedding_service.get_embeddings_batch(chunks).tolist()
 
-        result = add_document_chunks(chunks, embeddings, file.filename)
+        embeddings = embedding_service.get_embeddings_batch(
+            chunks
+        ).tolist()
+
+        result = add_document_chunks(
+            chunks,
+            embeddings,
+            file.filename,
+            file_hash
+        )
 
         return IngestResponse(
             filename=file.filename,
@@ -253,8 +280,14 @@ async def ingest(file: UploadFile = File(...), chunk_strategy: str = Form("sente
             chunking_strategy=chunk_strategy,
         )
 
+    except HTTPException:
+        raise
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
 
 
 # ---------------------------
@@ -334,3 +367,8 @@ async def analyze_db(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+@router.get("/knowledge-base/documents")
+def list_documents():
+    return {
+        "documents": get_all_documents()
+    }

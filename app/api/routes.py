@@ -1,7 +1,6 @@
 # app/api/routes.py
 import numpy as np
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Query
-from app.services.chroma_service import get_all_documents
 from typing import Optional
 
 from app.api.schemas import (
@@ -21,7 +20,9 @@ from app.services.chroma_service import (
     add_document_chunks,
     query_similar_chunks,
     get_collection_stats,
+    get_all_documents,
     document_already_exists,
+    generate_file_hash,
 )
 
 from app.services.embedding_service import EmbeddingService
@@ -195,7 +196,7 @@ async def analyze_documents(
                     suspicious_chunk_text=s_chunk,
                     best_match_source_index=best_idx,
                     best_match_source_text=best_match,
-                        similarity_score=round(_clamp_similarity_score(hybrid), 6),
+                    similarity_score=round(_clamp_similarity_score(hybrid), 6),
                     verdict=verdict,
                     confidence=round(confidence, 6),
                     source_filename="hybrid_input",
@@ -234,19 +235,15 @@ def stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ---------------------------
+# INGEST DOCUMENT
+# ---------------------------
 @router.post("/document/ingest", response_model=IngestResponse)
 async def ingest(
     file: UploadFile = File(...),
     chunk_strategy: str = Form("sentence")
 ):
     try:
-        # Check if file already exists
-        if document_already_exists(file.filename):
-            raise HTTPException(
-                status_code=409,
-                detail=f"{file.filename} already exists in ChromaDB"
-            )
-
         file_bytes = await _read_upload_file(file)
 
         text = await parse_uploaded_file(
@@ -254,17 +251,19 @@ async def ingest(
             file.filename,
             file.content_type
         )
-        from app.services.chroma_service import (
-    generate_file_hash,
-    document_already_exists,
-)
 
         file_hash = generate_file_hash(text)
+
+        # Check for duplicate by content hash
+        if document_already_exists(file_hash):
+            raise HTTPException(
+                status_code=409,
+                detail=f"{file.filename} already exists in ChromaDB"
+            )
+
         chunks = get_chunks(text, chunk_strategy)
 
-        embeddings = embedding_service.get_embeddings_batch(
-            chunks
-        ).tolist()
+        embeddings = embedding_service.get_embeddings_batch(chunks).tolist()
 
         result = add_document_chunks(
             chunks,
@@ -301,8 +300,8 @@ async def analyze_db(
 ):
 
     try:
-        stats = get_collection_stats()
-        if stats["total_chunks"] == 0:
+        db_stats = get_collection_stats()
+        if db_stats["total_chunks"] == 0:
             raise HTTPException(status_code=400, detail="DB empty")
 
         file_bytes = await _read_upload_file(file)
@@ -346,8 +345,8 @@ async def analyze_db(
                         similarity_score=round(_clamp_similarity_score(hybrid), 6),
                         verdict=verdict,
                         confidence=round(confidence, 6),
-                        source_filename=file.filename,
-                        source_document_id="db"
+                        source_filename=m.get("source_filename", "unknown"),
+                        source_document_id=m.get("document_id", "db")
                     )
                 )
 
@@ -362,11 +361,18 @@ async def analyze_db(
             overall_similarity=round(overall, 6),
             max_similarity=round(max_sim, 6),
             chunk_matches=chunk_matches,
-            knowledge_base_chunks_searched=int(stats["total_chunks"])
+            knowledge_base_chunks_searched=int(db_stats["total_chunks"])
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------
+# LIST DOCUMENTS
+# ---------------------------
 @router.get("/knowledge-base/documents")
 def list_documents():
     return {

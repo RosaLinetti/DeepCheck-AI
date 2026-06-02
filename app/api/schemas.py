@@ -1,7 +1,5 @@
 """
 Pydantic Schemas — DeepCheck-AI
-Validates incoming API request bodies and structures outgoing responses.
-Unified with Vector Database support.
 """
 
 from enum import Enum
@@ -9,112 +7,84 @@ from typing import List, Optional
 from pydantic import BaseModel, Field, model_validator
 
 
-# Enums
-
+# ---------------------------
+# ENUMS
+# ---------------------------
 class ChunkStrategy(str, Enum):
     SENTENCE = "sentence"
     SLIDING_WINDOW = "sliding_window"
 
 
-# Request Models
+class AlgorithmType(str, Enum):
+    SEMANTIC = "semantic"
+    TRADITIONAL = "traditional"
 
+
+# ---------------------------
+# REQUEST MODELS
+# ---------------------------
 class AnalyzeRequest(BaseModel):
-    """
-    Legacy endpoint schema — retained for backward compatibility.
-    Used by the basic /analyze route (whole-text vs. whole-text).
-    """
-    text1: str = Field(..., min_length=10, description="First text for comparison.")
-    text2: str = Field(..., min_length=10, description="Second text for comparison.")
+    """Legacy endpoint — retained for backward compatibility."""
+    text1: str = Field(..., min_length=10)
+    text2: str = Field(..., min_length=10)
 
 
 class DocumentAnalyzeRequest(BaseModel):
-    """
-    Primary schema for the chunked plagiarism pipeline.
-
-    Accepts two full documents and the desired chunking strategy.
-    Sliding window parameters are optional — only applied when
-    chunk_strategy == SLIDING_WINDOW.
-    """
-    source_document: str = Field(
-        ...,
-        min_length=50,
-        description="The original/reference document to check against."
-    )
-    suspicious_document: str = Field(
-        ...,
-        min_length=50,
-        description="The document suspected of plagiarism."
-    )
-    chunk_strategy: ChunkStrategy = Field(
-        default=ChunkStrategy.SENTENCE,
-        description="Chunking strategy: 'sentence' or 'sliding_window'."
-    )
-    window_size: Optional[int] = Field(
-        default=30,
-        ge=10,
-        le=200,
-        description="Token window size (only for sliding_window strategy)."
-    )
-    overlap: Optional[int] = Field(
-        default=10,
-        ge=0,
-        description="Token overlap between consecutive windows (only for sliding_window)."
-    )
+    source_document: str = Field(..., min_length=50)
+    suspicious_document: str = Field(..., min_length=50)
+    chunk_strategy: ChunkStrategy = Field(default=ChunkStrategy.SENTENCE)
+    window_size: Optional[int] = Field(default=30, ge=10, le=200)
+    overlap: Optional[int] = Field(default=10, ge=0)
+    algorithm: Optional[AlgorithmType] = Field(default=AlgorithmType.SEMANTIC)
 
     @model_validator(mode="after")
     def validate_window_params(self) -> "DocumentAnalyzeRequest":
         if self.chunk_strategy == ChunkStrategy.SLIDING_WINDOW:
             if self.overlap >= self.window_size:
-                raise ValueError(
-                    "overlap must be strictly less than window_size."
-                )
+                raise ValueError("overlap must be strictly less than window_size.")
         return self
 
 
-# Response Models
-
+# ---------------------------
+# RESPONSE MODELS
+# ---------------------------
 class ChunkMatch(BaseModel):
-    """Represents a single suspicious chunk matched against the source."""
     suspicious_chunk_index: int
     suspicious_chunk_text: str
     best_match_source_index: int
     best_match_source_text: str
     similarity_score: float = Field(..., ge=0.0, le=1.0)
-    verdict: str  # "plagiarised", "suspicious", or "original"
+    verdict: str
     confidence: float = Field(..., ge=0.0, le=1.0)
-
-    # ── NEW DATABASE TRACE FIELDS ────────────────────────────────────────────
-    # Setting defaults ensures your partner's existing 1-vs-1 endpoints won't crash
     source_filename: Optional[str] = Field(default="Direct Upload Input")
     source_document_id: Optional[str] = Field(default="N/A")
 
 
 class DocumentAnalyzeResponse(BaseModel):
-    """
-    Full pipeline response returned by /document/analyze.
-    """
     chunk_strategy: ChunkStrategy
     total_suspicious_chunks: int
-    overall_similarity: float
-    max_similarity: float
+    overall_similarity: float = Field(..., ge=0.0, le=1.0)
+    max_similarity: float = Field(..., ge=0.0, le=1.0)
     chunk_matches: List[ChunkMatch]
-
-    # ── NEW DATABASE TRACE FIELDS ────────────────────────────────────────────
     knowledge_base_chunks_searched: Optional[int] = Field(default=0)
+    source_filename: Optional[str] = Field(default="Original Source")
+    suspicious_filename: Optional[str] = Field(default="Suspicious Submission")
+    auto_ingested: Optional[bool] = Field(default=False)
+    algorithm_used: Optional[str] = Field(default="semantic")
 
 
-# ── NEW CHROMADB SCHEMAS ──────────────────────────────────────────────────────
-
+# ---------------------------
+# CHROMADB SCHEMAS
+# ---------------------------
 class IngestResponse(BaseModel):
-    """Response structure returned following a successful /document/ingest push."""
     filename: str
-    document_id: str        # UUID assigned to this document reference collection
+    document_id: str
     chunks_stored: int
     chunking_strategy: ChunkStrategy
 
 
 class KnowledgeBaseStats(BaseModel):
-    """Response schema used to display system vector metrics and diagnostics."""
     collection_name: str
     total_chunks: int
     persist_directory: str
+    total_documents: Optional[int] = Field(default=0)

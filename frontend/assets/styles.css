@@ -1,6 +1,24 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+/* Remove ALL Streamlit Material icon text leaks */
+.material-icons,
+span[data-testid="stIconMaterial"],
+.streamlit-expanderHeader svg,
+.streamlit-expanderHeader [class*="icon"],
+[data-testid="collapsedControl"],
+[data-testid="stSidebarNav"] svg {
+    display: none !important;
+}
 
+/* Prevent leftover icon text like arrow_down / keyboard_double */
+.streamlit-expanderHeader,
+[data-testid="stSidebarNav"] {
+    font-family: 'Space Grotesk', 'Inter', sans-serif !important;
+}
+
+/* Remove any icon spacing that causes overlap */
+.streamlit-expanderHeader {
+    gap: 0 !important;
+}
 /* ─── Base ─────────────────────────────────────────────── */
 .stApp {
     font-family: 'Inter', sans-serif;

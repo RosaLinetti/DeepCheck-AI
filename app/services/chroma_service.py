@@ -7,13 +7,14 @@ from typing import Optional, List
 
 logger = logging.getLogger(__name__)
 
-# ── CONFIG ─────────────────────────────────────────────
 CHROMA_PERSIST_DIR = "./chroma_storage"
 COLLECTION_NAME = "plagiarism_knowledge_base"
 DEFAULT_TOP_K = 5
 
 
-# ── CLIENT SETUP ───────────────────────────────────────
+# ---------------------------
+# CLIENT SETUP
+# ---------------------------
 def get_chroma_client() -> chromadb.PersistentClient:
     return chromadb.PersistentClient(
         path=CHROMA_PERSIST_DIR,
@@ -32,93 +33,108 @@ _client = get_chroma_client()
 _collection = get_or_create_collection(_client)
 
 
-# ── HASHING ────────────────────────────────────────────
+# ---------------------------
+# HASHING
+# ---------------------------
 def generate_file_hash(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-# ── DUPLICATE CHECK (FIXED & SAFE) ─────────────────────
+# ---------------------------
+# DUPLICATE CHECK
+# ---------------------------
 def document_already_exists(file_hash: str) -> bool:
-    """
-    Checks if a document with the same file_hash already exists.
-    """
     try:
         results = _collection.get(
             where={"file_hash": file_hash},
-            include=["metadatas"]
+            include=["metadatas"],
         )
-
         return bool(results.get("ids"))
-
     except Exception as e:
         logger.error(f"Duplicate check failed: {e}")
         return False
 
 
-# ── LIST DOCUMENTS ─────────────────────────────────────
-def get_all_documents():
+# ---------------------------
+# LIST DOCUMENTS  (summary)
+# ---------------------------
+def get_all_documents() -> list:
+    """Return one summary row per unique source filename."""
     try:
         results = _collection.get(include=["metadatas"])
-
-        files = {}
-
+        files: dict = {}
         for meta in results.get("metadatas", []):
             if not meta:
                 continue
-
             filename = meta.get("source_filename", "unknown")
-            doc_id = meta.get("document_id", "unknown")
-
+            doc_id   = meta.get("document_id", "unknown")
             if filename not in files:
-                files[filename] = {
-                    "chunks": 0,
-                    "document_ids": set()
-                }
-
+                files[filename] = {"chunks": 0, "document_ids": set()}
             files[filename]["chunks"] += 1
             files[filename]["document_ids"].add(doc_id)
 
         output = [
             {
-                "filename": fname,
-                "chunks": data["chunks"],
-                "documents": len(data["document_ids"])
+                "filename":  fname,
+                "chunks":    data["chunks"],
+                "documents": len(data["document_ids"]),
             }
             for fname, data in files.items()
         ]
-
         output.sort(key=lambda x: x["filename"].lower())
-
         return output
-
     except Exception as e:
         logger.error(f"Failed fetching documents: {e}")
         return []
 
 
-# ── DELETE DOCUMENT ────────────────────────────────────
+# ---------------------------
+# GET ALL RAW CHUNKS  ── NEW ──
+# Used by the traditional (lexical) DB search path so it can compare
+# every stored chunk without needing embeddings.
+# ---------------------------
+def get_all_raw_chunks() -> List[dict]:
+    """Return every chunk stored in the collection as a plain dict."""
+    try:
+        results = _collection.get(include=["documents", "metadatas"])
+        chunks = []
+        for doc, meta in zip(
+            results.get("documents", []),
+            results.get("metadatas", []),
+        ):
+            if doc:
+                chunks.append({
+                    "chunk_text":      doc,
+                    "source_filename": (meta or {}).get("source_filename", "unknown"),
+                    "document_id":     (meta or {}).get("document_id", "unknown"),
+                    "chunk_index":     int((meta or {}).get("chunk_index", -1)),
+                })
+        return chunks
+    except Exception as e:
+        logger.error(f"get_all_raw_chunks failed: {e}")
+        return []
+
+
+# ---------------------------
+# DELETE DOCUMENT
+# ---------------------------
 def delete_document(filename: str) -> bool:
     try:
-        results = _collection.get(
-            where={"source_filename": filename}
-        )
-
+        results = _collection.get(where={"source_filename": filename})
         ids = results.get("ids", [])
-
         if not ids:
             return False
-
         _collection.delete(ids=ids)
-
-        logger.info(f"Deleted {len(ids)} chunks from {filename}")
+        logger.info(f"Deleted {len(ids)} chunks for '{filename}'")
         return True
-
     except Exception as e:
         logger.error(f"Delete failed: {e}")
         return False
 
 
-# ── INGEST DATA ────────────────────────────────────────
+# ---------------------------
+# INGEST
+# ---------------------------
 def add_document_chunks(
     chunks: List[str],
     embeddings: List[List[float]],
@@ -126,27 +142,22 @@ def add_document_chunks(
     file_hash: str,
     document_id: Optional[str] = None,
 ) -> dict:
-
     if not chunks:
         raise ValueError("Chunks cannot be empty")
-
     if len(chunks) != len(embeddings):
         raise ValueError("Chunks and embeddings size mismatch")
 
-    doc_id = document_id or str(uuid.uuid4())
-
-    ids = [f"{doc_id}_chunk_{i}" for i in range(len(chunks))]
-
+    doc_id    = document_id or str(uuid.uuid4())
+    ids       = [f"{doc_id}_chunk_{i}" for i in range(len(chunks))]
     metadatas = [
         {
             "source_filename": source_filename,
-            "document_id": doc_id,
-            "chunk_index": i,
-            "file_hash": file_hash,   # ✅ IMPORTANT FIX
+            "document_id":     doc_id,
+            "chunk_index":     i,
+            "file_hash":       file_hash,
         }
         for i in range(len(chunks))
     ]
-
     safe_embeddings = [[float(v) for v in vec] for vec in embeddings]
 
     _collection.add(
@@ -155,26 +166,21 @@ def add_document_chunks(
         documents=chunks,
         metadatas=metadatas,
     )
-
-    logger.info(f"Added {len(chunks)} chunks from {source_filename} (doc_id={doc_id})")
-
-    return {
-        "document_id": doc_id,
-        "chunks_added": len(chunks)
-    }
+    logger.info(f"Added {len(chunks)} chunks from '{source_filename}' (doc_id={doc_id})")
+    return {"document_id": doc_id, "chunks_added": len(chunks)}
 
 
-# ── SEMANTIC SEARCH ─────────────────────────────────────
+# ---------------------------
+# SEMANTIC SEARCH
+# ---------------------------
 def query_similar_chunks(
     query_embeddings: List[List[float]],
     top_k: int = DEFAULT_TOP_K,
 ) -> List[List[dict]]:
-
     if _collection.count() == 0:
         return [[] for _ in query_embeddings]
 
     safe_embeddings = [[float(v) for v in vec] for vec in query_embeddings]
-
     results = _collection.query(
         query_embeddings=safe_embeddings,
         n_results=top_k,
@@ -182,34 +188,55 @@ def query_similar_chunks(
     )
 
     all_results = []
-
     for i in range(len(query_embeddings)):
         chunk_results = []
-
-        docs = results["documents"][i]
-        metas = results["metadatas"][i]
-        dists = results["distances"][i]
-
-        for doc, meta, dist in zip(docs, metas, dists):
-            similarity = 1.0 - float(dist)
-
+        for doc, meta, dist in zip(
+            results["documents"][i],
+            results["metadatas"][i],
+            results["distances"][i],
+        ):
+            similarity = _clamp(1.0 - float(dist))
             chunk_results.append({
-                "chunk_text": doc,
+                "chunk_text":      doc,
                 "source_filename": meta.get("source_filename", "unknown"),
-                "document_id": meta.get("document_id", "unknown"),
-                "chunk_index": int(meta.get("chunk_index", -1)),
+                "document_id":     meta.get("document_id", "unknown"),
+                "chunk_index":     int(meta.get("chunk_index", -1)),
                 "similarity_score": round(similarity, 6),
             })
-
         all_results.append(chunk_results)
-
     return all_results
 
 
-# ── STATS ───────────────────────────────────────────────
+def _clamp(v: float) -> float:
+    return float(min(1.0, max(0.0, v)))
+
+
+# ---------------------------
+# STATS  ── fixed total_documents ──
+# ---------------------------
 def get_collection_stats() -> dict:
+    """
+    Returns chunk count, unique document count, collection name, and persist dir.
+    total_documents is derived by counting unique document_id values in metadata.
+    """
+    total_chunks = _collection.count()
+    total_documents = 0
+
+    if total_chunks > 0:
+        try:
+            results = _collection.get(include=["metadatas"])
+            doc_ids = {
+                meta.get("document_id")
+                for meta in results.get("metadatas", [])
+                if meta and meta.get("document_id")
+            }
+            total_documents = len(doc_ids)
+        except Exception as e:
+            logger.error(f"Could not count unique documents: {e}")
+
     return {
-        "collection_name": COLLECTION_NAME,
-        "total_chunks": _collection.count(),
+        "collection_name":  COLLECTION_NAME,
+        "total_chunks":     total_chunks,
         "persist_directory": CHROMA_PERSIST_DIR,
+        "total_documents":  total_documents,
     }

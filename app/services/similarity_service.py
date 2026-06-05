@@ -9,7 +9,8 @@ from typing import List, Dict, Any
 
 from app.services.embedding_service import EmbeddingService
 from app.services.classifier_service import classify_chunk
-# Module-level singleton
+
+# Single instance reused across service calls
 _embedding_service = EmbeddingService()
 
 
@@ -21,14 +22,21 @@ def _compute_multi_feature_score(
     w_length: float = 0.2,
     w_lexical: float = 0.2,
 ) -> float:
+    """
+    Combine cosine similarity with simple text features
+    (length ratio + word overlap) into a single score.
+    """
     cosine = cosine_score
 
+    # length similarity
     len_susp = max(len(susp_text.split()), 1)
     len_src  = max(len(src_text.split()), 1)
     length_ratio = min(len_susp, len_src) / max(len_susp, len_src)
 
+    # lexical overlap
     words_susp = set(susp_text.lower().split())
     words_src  = set(src_text.lower().split())
+
     intersection = words_susp & words_src
     union        = words_susp | words_src
     lexical_overlap = len(intersection) / len(union) if union else 0.0
@@ -46,6 +54,7 @@ def _get_adaptive_verdict(
     score: float,
     total_chunks: int,
 ) -> str:
+    """ Thresholds change slightly depending on document size (smaller docs need stricter scoring)."""
     if total_chunks <= 3:
         high, mid = 0.78, 0.55
     elif total_chunks <= 8:
@@ -73,6 +82,11 @@ def compute_chunk_similarity_matrix(
     source_chunks: List[str],
     suspicious_chunks: List[str],
 ) -> List[Dict[str, Any]]:
+    """
+    Compare each suspicious chunk against source chunks
+    and find best matches using cosine similarity + heuristics.
+    """
+
     if not source_chunks:
         raise ValueError("source_chunks cannot be empty.")
     if not suspicious_chunks:
@@ -85,6 +99,7 @@ def compute_chunk_similarity_matrix(
 
     matches = []
 
+    # For each suspicious chunk, find best matching source chunk
     for susp_idx, similarity_row in enumerate(similarity_matrix):
         best_source_idx = int(np.argmax(similarity_row))
         best_score = float(round(float(similarity_row[best_source_idx]), 4))

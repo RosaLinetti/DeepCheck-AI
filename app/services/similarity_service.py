@@ -7,11 +7,8 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from typing import List, Dict, Any
 
-from app.services.embedding_service import EmbeddingService
+from app.services.embedding_service import embedding_service as _embedding_service
 from app.services.classifier_service import classify_chunk
-
-# Single instance reused across service calls
-_embedding_service = EmbeddingService()
 
 
 def _compute_multi_feature_score(

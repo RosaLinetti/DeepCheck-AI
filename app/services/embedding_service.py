@@ -4,6 +4,7 @@ from sentence_transformers import SentenceTransformer
 class EmbeddingService:
     def __init__(self):
         # Load SBERT model once when the class initializes
+        print("Loading SBERT model (all-MiniLM-L6-v2)...")
         self.model = SentenceTransformer("all-MiniLM-L6-v2")
 
     def generate_embedding(self, text: str):
@@ -16,3 +17,6 @@ class EmbeddingService:
         if not texts:
             return []
         return self.model.encode(texts, convert_to_numpy=True)
+
+# Shared singleton instance
+embedding_service = EmbeddingService()

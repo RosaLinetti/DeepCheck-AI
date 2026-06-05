@@ -222,6 +222,7 @@ __marimo__/
 # ChromaDB local storage
 chroma/
 chromadb/
+chroma_storage/
 *.sqlite
 *.db
 *.parquet

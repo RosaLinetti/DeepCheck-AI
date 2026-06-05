@@ -20,6 +20,19 @@ def load_css():
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
     except Exception as e:
         st.warning(f"Could not load CSS: {e}")
+    
+    # Theme injection: Apply light theme class if selected
+    if st.session_state.get("theme") == "light":
+        st.markdown(
+            '<script>try{document.querySelector(".stApp").classList.add("light-theme");}catch(e){}</script>',
+            unsafe_allow_html=True
+        )
+        st.markdown('<div class="light-theme">', unsafe_allow_html=True)
+    else:
+        st.markdown(
+            '<script>try{document.querySelector(".stApp").classList.remove("light-theme");}catch(e){}</script>',
+            unsafe_allow_html=True
+        )
 
 
 def init_session_state():
@@ -33,6 +46,7 @@ def init_session_state():
         "settings_open": False,
         "dc_css_loaded": False,
         "current_mode": "1v1",
+        "theme": "dark",
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -40,6 +54,30 @@ def init_session_state():
 
 
 def render_sidebar_navigation():
+    # Theme toggle
+    theme_mode = st.sidebar.toggle(
+        label="Light Mode" if st.session_state.theme == "dark" else "Dark Mode",
+        value=st.session_state.theme == "light",
+        key="theme_toggle"
+    )
+    
+    if theme_mode:
+        if st.session_state.theme != "light":
+            st.session_state.theme = "light"
+            st.rerun()
+    else:
+        if st.session_state.theme != "dark":
+            st.session_state.theme = "dark"
+            st.rerun()
+    
+    # Display active theme indicator
+    if st.session_state.theme == "light":
+        st.sidebar.markdown("☀️ **Light Mode Active**", help="Switch to Dark Mode")
+    else:
+        st.sidebar.markdown("🌙 **Dark Mode Active**", help="Switch to Light Mode")
+    
+    st.sidebar.markdown("---")
+    
     mode = st.sidebar.radio(
         "Select Analysis Mode",
         ["1v1", "db", "library"],
@@ -184,19 +222,34 @@ def verdict_badge_html(verdict):
 
 
 def highlight_matching_segments(text, reference, confidence):
-    ref_words = set(reference.lower().split())
-
-    color = "#ff6b6b" if confidence >= 0.8 else "#ffa94d" if confidence >= 0.5 else "#ffe066"
-
-    result = []
-    for word in text.split():
-        clean = word.strip(".,;:!?\"'()")
-        if clean.lower() in ref_words:
-            result.append(word)
-        else:
-            result.append(word)
-
-    return " ".join(result)
+    """
+    Renders a pro-grade AI checker heatmap with dynamic opacity based on confidence.
+    confidence < 0.4: returns text unstyled
+    0.4 <= confidence < 0.7: amber/yellow tint with left border
+    confidence >= 0.7: rose/red tint with left border
+    """
+    if confidence < 0.4:
+        return text
+    
+    # Determine color and opacity based on confidence level
+    if confidence >= 0.7:
+        # Plagiarised (high match) - Rose/Red
+        color_rgb = "244, 63, 94"  # rgba(244, 63, 94, ...)
+        border_color = "#f43f5e"
+    else:
+        # Suspicious (medium match) - Amber/Yellow
+        color_rgb = "234, 179, 8"  # rgba(234, 179, 8, ...)
+        border_color = "#eab308"
+    
+    # Scale opacity dynamically: confidence 0.4-0.7 maps to 0.3-0.6, confidence 0.7+ maps to 0.6-0.9
+    if confidence >= 0.7:
+        alpha = min(0.9, 0.6 + (confidence - 0.7) * 0.5)
+    else:
+        alpha = 0.3 + (confidence - 0.4) * (0.6 - 0.3) / 0.3
+    
+    # Create a subtle left border highlight with background tint
+    highlighted_html = f'<span style="background-color: rgba({color_rgb}, {alpha:.2f}); border-left: 4px solid {border_color}; padding-left: 4px; display: inline;">{text}</span>'
+    return highlighted_html
 
 
 # ---------------- API CALLS ----------------

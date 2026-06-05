@@ -26,10 +26,9 @@ from app.services.chroma_service import (
     delete_document,
 )
 
-from app.services.embedding_service import EmbeddingService
+from app.services.embedding_service import embedding_service
 from app.services.classifier_service import classify_chunk
 
-embedding_service = EmbeddingService()
 router = APIRouter()
 
 # ---------------------------

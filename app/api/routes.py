@@ -1,5 +1,6 @@
 # app/api/routes.py
 import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity as sklearn_cosine_similarity
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Query
 from typing import Optional
 
@@ -39,13 +40,6 @@ def _clamp_similarity_score(score: float) -> float:
     """Clamp similarity score to [0.0, 1.0] to prevent Pydantic validation errors."""
     return float(min(1.0, max(0.0, score)))
 
-def cosine_similarity(v1, v2):
-    v1 = np.array(v1)
-    v2 = np.array(v2)
-    denom = np.linalg.norm(v1) * np.linalg.norm(v2)
-    if denom == 0:
-        return 0.0
-    return float(np.dot(v1, v2) / denom)
 
 def lexical_similarity(text_a: str, text_b: str) -> float:
     """
@@ -174,7 +168,7 @@ async def analyze_documents(
                 best_idx = 0
 
                 for j, (src_chunk, src_vec) in enumerate(zip(source_chunks, source_emb)):
-                    sim = cosine_similarity(s_vec, src_vec)
+                    sim = float(sklearn_cosine_similarity([s_vec], [src_vec])[0][0])
                     if sim > best_score:
                         best_score = sim
                         best_match = src_chunk

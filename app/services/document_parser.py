@@ -72,11 +72,7 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
 
 def extract_text_from_docx(file_bytes: bytes) -> str:
     """
-    Extract all text from a DOCX file.
-
-    Iterates over paragraphs (which are streamed by python-docx),
-    so memory stays proportional to the largest single paragraph
-    rather than the whole document.
+    Extract text from a DOCX file using paragraphs.
     """
     try:
         doc = DocxDocument(io.BytesIO(file_bytes))
@@ -95,10 +91,7 @@ def extract_text_from_docx(file_bytes: bytes) -> str:
 
 def extract_text_from_txt(file_bytes: bytes) -> str:
     """
-    Extract text from a plain-text (.txt) file.
-
-    Attempts UTF-8 decoding first; falls back to Latin-1 which
-    always succeeds since every byte maps to a valid character.
+    Extract text from a .txt file with UTF-8 fallback.
     """
     try:
         text = file_bytes.decode("utf-8")
@@ -140,26 +133,8 @@ async def parse_uploaded_file(
     content_type: Optional[str] = None,
 ) -> str:
     """
-    High-level entry point: detect format, validate size, extract text.
-
-    Parameters
-    ----------
-    file_bytes : bytes
-        Raw file content.
-    filename : str
-        Original filename (used for format detection fallback).
-    content_type : Optional[str]
-        MIME type from the upload, if available.
-
-    Returns
-    -------
-    str
-        Extracted plain text from the document.
-
-    Raises
-    ------
-    DocumentParseError
-        If the file is too large, unsupported, or cannot be parsed.
+    Main function to extract text from uploaded documents.
+    Detects file type, validates input, and returns plain text.
     """
     # Size guard
     if len(file_bytes) > MAX_FILE_SIZE_BYTES:

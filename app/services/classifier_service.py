@@ -1,10 +1,9 @@
-# app/services/classifier_service.py
 """
-Lightweight ML Classifier — DeepCheck-AI
-Trains a Logistic Regression model on hand-crafted feature examples
-and predicts plagiarism verdicts from (cosine, length_ratio, lexical_overlap).
-"""
+Lightweight classifier for plagiarism detection.
 
+Uses a Logistic Regression model trained on simple features like
+cosine similarity, length ratio, and lexical overlap.
+"""
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler

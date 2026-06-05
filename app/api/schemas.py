@@ -1,15 +1,13 @@
-"""
-Pydantic Schemas — DeepCheck-AI
-"""
+"""Pydantic Schemas in DeepCheck-AI"""
 
 from enum import Enum
 from typing import List, Optional
 from pydantic import BaseModel, Field, model_validator
 
-
 # ---------------------------
 # ENUMS
 # ---------------------------
+
 class ChunkStrategy(str, Enum):
     SENTENCE = "sentence"
     SLIDING_WINDOW = "sliding_window"
@@ -19,15 +17,14 @@ class AlgorithmType(str, Enum):
     SEMANTIC = "semantic"
     TRADITIONAL = "traditional"
 
-
 # ---------------------------
 # REQUEST MODELS
 # ---------------------------
+
 class AnalyzeRequest(BaseModel):
     """Legacy endpoint — retained for backward compatibility."""
     text1: str = Field(..., min_length=10)
     text2: str = Field(..., min_length=10)
-
 
 class DocumentAnalyzeRequest(BaseModel):
     source_document: str = Field(..., min_length=50)
@@ -44,10 +41,10 @@ class DocumentAnalyzeRequest(BaseModel):
                 raise ValueError("overlap must be strictly less than window_size.")
         return self
 
-
-# ---------------------------
+# --------------------------
 # RESPONSE MODELS
 # ---------------------------
+
 class ChunkMatch(BaseModel):
     suspicious_chunk_index: int
     suspicious_chunk_text: str
@@ -72,10 +69,10 @@ class DocumentAnalyzeResponse(BaseModel):
     auto_ingested: Optional[bool] = Field(default=False)
     algorithm_used: Optional[str] = Field(default="semantic")
 
-
 # ---------------------------
 # CHROMADB SCHEMAS
 # ---------------------------
+
 class IngestResponse(BaseModel):
     filename: str
     document_id: str

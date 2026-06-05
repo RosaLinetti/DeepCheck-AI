@@ -157,8 +157,51 @@ def _render_scan_results(data: dict):
         labels = list(source_scores.keys())
         means = [sum(v) / len(v) * 100 for v in source_scores.values()]
 
-        fig = go.Figure(go.Bar(x=means, y=labels, orientation="h"))
+        fig = go.Figure(go.Bar(
+            x=means,
+            y=labels,
+            orientation="h",
+            marker=dict(color="#3b82f6")
+        ))
+        fig.update_layout(
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='#f8fafc'),
+        )
         st.plotly_chart(fig, use_container_width=True)
+    
+    # Add verdict distribution chart
+    verdict_counts = {"original": 0, "suspicious": 0, "plagiarised": 0}
+    for c in chunks:
+        verdict = dynamic_verdict(c["similarity_score"])
+        verdict_counts[verdict] += 1
+    
+    # Create donut chart with semantic colors
+    if sum(verdict_counts.values()) > 0:
+        st.markdown("Verdict Distribution")
+        
+        fig_donut = go.Figure(data=[go.Pie(
+            labels=list(verdict_counts.keys()),
+            values=list(verdict_counts.values()),
+            hole=0.4,
+            marker=dict(
+                colors=[
+                    "#22c55e",  # original - Emerald Green
+                    "#eab308",  # suspicious - Warning Amber
+                    "#f43f5e",  # plagiarised - Alert Red
+                ]
+            ),
+            textposition='inside',
+            textinfo='label+percent'
+        )])
+        
+        fig_donut.update_layout(
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='#f8fafc'),
+            showlegend=True
+        )
+        st.plotly_chart(fig_donut, use_container_width=True)
 
     # Chunk explorer
     st.markdown("Chunk Detail Explorer")

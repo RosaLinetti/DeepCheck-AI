@@ -5,7 +5,6 @@ from app.core.embedder import generate_embedding
 
 def process_text(text: str):
     """
-    FULL PERSON 1 PIPELINE:
     text → clean → sentence split → sliding window → embeddings
     """
 

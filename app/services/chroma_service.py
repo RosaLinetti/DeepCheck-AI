@@ -11,11 +11,15 @@ CHROMA_PERSIST_DIR = "./chroma_storage"
 COLLECTION_NAME = "plagiarism_knowledge_base"
 DEFAULT_TOP_K = 5
 
-
 # ---------------------------
 # CLIENT SETUP
 # ---------------------------
+
 def get_chroma_client() -> chromadb.PersistentClient:
+    """
+    Create a persistent ChromaDB client. 
+    Telemetry is disabled to avoid sending usage statistics.
+    """
     return chromadb.PersistentClient(
         path=CHROMA_PERSIST_DIR,
         settings=Settings(anonymized_telemetry=False),
@@ -23,12 +27,13 @@ def get_chroma_client() -> chromadb.PersistentClient:
 
 
 def get_or_create_collection(client: chromadb.PersistentClient):
+    """ Retrieve the plagiarism collection or create it if it does not exist."""
     return client.get_or_create_collection(
         name=COLLECTION_NAME,
         metadata={"hnsw:space": "cosine"},
     )
 
-
+# Shared collection instance used by repository operations.
 _client = get_chroma_client()
 _collection = get_or_create_collection(_client)
 
@@ -36,13 +41,17 @@ _collection = get_or_create_collection(_client)
 # ---------------------------
 # HASHING
 # ---------------------------
+
+"""used for duplicate detection during ingestion"""
+
 def generate_file_hash(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+    return hashlib.sha256(text.encode("utf-8")).hexdigest() 
 
 
 # ---------------------------
 # DUPLICATE CHECK
 # ---------------------------
+
 def document_already_exists(file_hash: str) -> bool:
     try:
         results = _collection.get(
@@ -56,8 +65,9 @@ def document_already_exists(file_hash: str) -> bool:
 
 
 # ---------------------------
-# LIST DOCUMENTS  (summary)
+# LIST DOCUMENTS  ( with summary)
 # ---------------------------
+
 def get_all_documents() -> list:
     """Return one summary row per unique source filename."""
     try:
@@ -89,12 +99,11 @@ def get_all_documents() -> list:
 
 
 # ---------------------------
-# GET ALL RAW CHUNKS  ── NEW ──
-# Used by the traditional (lexical) DB search path so it can compare
-# every stored chunk without needing embeddings.
+# GET ALL RAW CHUNKS 
 # ---------------------------
+
 def get_all_raw_chunks() -> List[dict]:
-    """Return every chunk stored in the collection as a plain dict."""
+    """Return all stored chunks for lexical/text-based search."""
     try:
         results = _collection.get(include=["documents", "metadatas"])
         chunks = []
@@ -118,6 +127,7 @@ def get_all_raw_chunks() -> List[dict]:
 # ---------------------------
 # DELETE DOCUMENT
 # ---------------------------
+
 def delete_document(filename: str) -> bool:
     try:
         results = _collection.get(where={"source_filename": filename})
@@ -135,6 +145,7 @@ def delete_document(filename: str) -> bool:
 # ---------------------------
 # INGEST
 # ---------------------------
+
 def add_document_chunks(
     chunks: List[str],
     embeddings: List[List[float]],
@@ -142,6 +153,8 @@ def add_document_chunks(
     file_hash: str,
     document_id: Optional[str] = None,
 ) -> dict:
+    """ Store document chunks in the vector database."""
+
     if not chunks:
         raise ValueError("Chunks cannot be empty")
     if len(chunks) != len(embeddings):
@@ -173,6 +186,7 @@ def add_document_chunks(
 # ---------------------------
 # SEMANTIC SEARCH
 # ---------------------------
+
 def query_similar_chunks(
     query_embeddings: List[List[float]],
     top_k: int = DEFAULT_TOP_K,
@@ -211,13 +225,9 @@ def _clamp(v: float) -> float:
     return float(min(1.0, max(0.0, v)))
 
 
-# ---------------------------
-# STATS  ── fixed total_documents ──
-# ---------------------------
 def get_collection_stats() -> dict:
     """
-    Returns chunk count, unique document count, collection name, and persist dir.
-    total_documents is derived by counting unique document_id values in metadata.
+    Return chunk and document counts for the collection.
     """
     total_chunks = _collection.count()
     total_documents = 0

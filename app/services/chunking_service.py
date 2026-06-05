@@ -1,8 +1,8 @@
 """
-Chunking Service — DeepCheck-AI
-Provides two strategies:
-  - SENTENCE: tokenizes text into individual sentences via regex
-  - SLIDING_WINDOW: produces overlapping fixed-size token windows
+Text chunking utilities used before plagiarism checking.
+
+- Sentence: splits text into sentences.
+- Sliding window: creates overlapping word chunks.
 """
 
 import re
@@ -16,16 +16,13 @@ class ChunkStrategy(str, Enum):
 
 
 def _tokenize_sentences(text: str) -> List[str]:
-    """Split text into sentences using punctuation-aware regex."""
+    """Use regex to separate text into sentences."""
     raw = re.split(r'(?<=[.!?])\s+', text.strip())
     return [s.strip() for s in raw if len(s.strip()) > 2]
 
 
 def chunk_by_sentence(text: str) -> List[str]:
-    """
-    Returns a list of sentence-level string chunks.
-    Each chunk maps to one index in the downstream comparison matrix.
-    """
+    """Break text into sentence-level chunks for comparison."""
     return _tokenize_sentences(text)
 
 
@@ -35,8 +32,8 @@ def chunk_by_sliding_window(
     overlap: int = 10
 ) -> List[str]:
     """
-    Returns overlapping token-window chunks as reconstructed strings.
-    Preserves original casing and punctuation for high-quality UI highlighting.
+    Create overlapping word chunks using a sliding window.
+    Keeps the original text formatting intact.
     """
     if overlap >= window_size:
         raise ValueError(
@@ -63,7 +60,7 @@ def get_chunks(
     overlap: int = 10
 ) -> List[str]:
     """
-    Unified dispatcher — routes to the correct chunker based on strategy enum.
+    Return chunks based on the selected strategy.
     """
     if strategy == ChunkStrategy.SENTENCE:
         return chunk_by_sentence(text)

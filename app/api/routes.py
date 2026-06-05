@@ -32,14 +32,13 @@ from app.services.classifier_service import classify_chunk
 embedding_service = EmbeddingService()
 router = APIRouter()
 
-
 # ---------------------------
 # UTILS
 # ---------------------------
+
 def _clamp_similarity_score(score: float) -> float:
     """Clamp similarity score to [0.0, 1.0] to prevent Pydantic validation errors."""
     return float(min(1.0, max(0.0, score)))
-
 
 def cosine_similarity(v1, v2):
     v1 = np.array(v1)
@@ -48,7 +47,6 @@ def cosine_similarity(v1, v2):
     if denom == 0:
         return 0.0
     return float(np.dot(v1, v2) / denom)
-
 
 def lexical_similarity(text_a: str, text_b: str) -> float:
     """
@@ -62,7 +60,6 @@ def lexical_similarity(text_a: str, text_b: str) -> float:
         return 0.0
     return len(words_a & words_b) / len(union)
 
-
 async def _read_upload_file(file: UploadFile) -> bytes:
     try:
         return await file.read()
@@ -74,10 +71,10 @@ async def _read_upload_file(file: UploadFile) -> bytes:
         except Exception:
             pass
 
-
 # ---------------------------
 # BASIC ROUTES
 # ---------------------------
+
 @router.get("/health")
 def health():
     return {"status": "ok"}
@@ -87,10 +84,10 @@ def health():
 def root():
     return {"message": "DeepCheck API running"}
 
-
 # ---------------------------
 # LEGACY TEXT SIMILARITY
 # ---------------------------
+
 @router.post("/analyze")
 def analyze(payload: AnalyzeRequest):
     try:
@@ -102,10 +99,10 @@ def analyze(payload: AnalyzeRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 # ---------------------------
 # 1V1 DOCUMENT ANALYSIS
 # ---------------------------
+
 @router.post("/document/analyze", response_model=DocumentAnalyzeResponse)
 async def analyze_documents(
     source_file: UploadFile = File(None),
@@ -271,10 +268,10 @@ async def analyze_documents(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Pipeline error: {str(e)}")
 
-
 # ---------------------------
 # CHROMA STATS
 # ---------------------------
+
 @router.get("/knowledge-base/stats", response_model=KnowledgeBaseStats)
 def stats():
     try:
@@ -282,10 +279,10 @@ def stats():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 # ---------------------------
 # INGEST DOCUMENT
 # ---------------------------
+
 @router.post("/document/ingest", response_model=IngestResponse)
 async def ingest(
     file: UploadFile = File(...),
@@ -318,10 +315,10 @@ async def ingest(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 # ---------------------------
 # DELETE DOCUMENT  ── NEW ──
 # ---------------------------
+
 @router.delete("/document/delete")
 def delete_doc(filename: str = Query(..., description="Filename to remove from ChromaDB")):
     """Remove all chunks belonging to a document from the knowledge base."""
@@ -339,6 +336,7 @@ def delete_doc(filename: str = Query(..., description="Filename to remove from C
 # ---------------------------
 # DB SEARCH ANALYSIS
 # ---------------------------
+
 @router.post("/document/analyze/search", response_model=DocumentAnalyzeResponse)
 async def analyze_db(
     file: UploadFile = File(...),
@@ -486,10 +484,10 @@ async def analyze_db(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 # ---------------------------
 # LIST DOCUMENTS
 # ---------------------------
+
 @router.get("/knowledge-base/documents")
 def list_documents():
     return {"documents": get_all_documents()}

@@ -22,6 +22,14 @@ TRAINING_FEATURES = np.array([
     [0.25, 0.60, 0.03],
     [0.30, 0.95, 0.05],
     [0.35, 0.85, 0.04],
+
+    # summary / synthesis examples
+    [0.55, 0.20, 0.05],
+    [0.60, 0.25, 0.08],
+    [0.65, 0.18, 0.06],
+    [0.50, 0.30, 0.09],
+    [0.58, 0.28, 0.07],
+
     # suspicious
     [0.50, 0.80, 0.10],
     [0.55, 0.75, 0.12],
@@ -29,6 +37,7 @@ TRAINING_FEATURES = np.array([
     [0.62, 0.85, 0.18],
     [0.65, 0.90, 0.20],
     [0.68, 0.78, 0.22],
+
     # plagiarised
     [0.80, 0.95, 0.55],
     [0.85, 0.90, 0.60],
@@ -39,9 +48,10 @@ TRAINING_FEATURES = np.array([
 ])
 
 TRAINING_LABELS = np.array([
-    0, 0, 0, 0, 0, 0,   # original
-    1, 1, 1, 1, 1, 1,   # suspicious
-    2, 2, 2, 2, 2, 2,   # plagiarised
+    0, 0, 0, 0, 0, 0,    # original
+    0, 0, 0, 0, 0,       # summary / synthesis examples
+    1, 1, 1, 1, 1, 1,    # suspicious
+    2, 2, 2, 2, 2, 2,    # plagiarised
 ])
 
 LABEL_MAP = {0: "original", 1: "suspicious", 2: "plagiarised"}
@@ -71,6 +81,12 @@ class PlagiarismClassifier:
         Returns:
             (verdict_label, confidence) e.g. ("suspicious", 0.81)
         """
+        # ── FIXED: Summary Guardrail Override ────────────────────────────────
+        # If vocabulary overlap and length match are both low, it's an original 
+        # summary. Catch it cleanly before the model can make a false prediction.
+        if lexical_overlap < 0.12 and length_ratio < 0.35:
+            return "original", float(round(1.0 - lexical_overlap, 4))
+
         features = np.array([[cosine_score, length_ratio, lexical_overlap]])
         features_scaled = self.scaler.transform(features)
 

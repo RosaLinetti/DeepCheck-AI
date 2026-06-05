@@ -10,14 +10,6 @@
     --border-color: #334155;
 }
 
-.light-theme {
-    /* Light theme override */
-    --bg-main: #f8fafc;
-    --bg-surface: #ffffff;
-    --text-main: #0f172a;
-    --text-muted: #64748b;
-    --border-color: #e2e8f0;
-}
 
 /* Remove ALL Streamlit Material icon text leaks */
 .material-icons,
@@ -309,7 +301,7 @@ footer    { visibility: hidden; }
     font-family: 'Space Grotesk', sans-serif;
     font-size: 0.95rem;
     font-weight: 600;
-    color: #e2e8f0;
+    color: var(--text-main);
     margin-bottom: 0.4rem;
 }
 
@@ -498,8 +490,9 @@ div[data-testid="stElementContainer"].st-key-nav_section {
     transform: none !important;
     width: min(720px, calc(100vw - 1.5rem)) !important;
     z-index: 9998 !important;
-    background: #0f172a !important;
-    border: 1px solid #334155 !important;
+    /* CHANGE: Swapped hardcoded #0f172a for variable */
+    background: var(--bg-main) !important; 
+    border: 1px solid var(--border-color) !important;
     border-radius: 14px !important;
     box-shadow: 0 10px 30px rgba(0,0,0,0.35) !important;
     padding: 0.35rem !important;
@@ -533,8 +526,9 @@ div[data-testid="stElementContainer"].st-key-nav_section [role="radiogroup"] lab
 }
 
 div[data-testid="stElementContainer"].st-key-nav_section [role="radiogroup"] label:hover {
-    background: #1e293b !important;
-    color: #dbeafe !important;
+    /* CHANGE: Swapped hardcoded dark value for surface background */
+    background: var(--bg-surface) !important;
+    color: #3b82f6 !important;
 }
 
 div[data-testid="stElementContainer"].st-key-nav_section [role="radiogroup"] label:has(input:checked) {
@@ -608,7 +602,7 @@ div[data-testid="stElementContainer"].st-key-nav_section [role="radiogroup"] p {
 .page-scan .chart-header,
 .page-scan .results-header h2 {
     font-family: 'Space Grotesk', sans-serif;
-    color: #e6eefc;
+    color: var(--text-main);
 }
 .page-scan {
     --card-radius: 12px;
@@ -705,7 +699,7 @@ div[data-testid="stElementContainer"].st-key-nav_section [role="radiogroup"] p {
 .db-stat-mono {
     font-family: 'Space Grotesk', sans-serif;
     font-size: 0.95rem;
-    color: #bfdbfe;
+    color: #3b82f6;
 }
 
 .db-stat-ok {
@@ -925,13 +919,14 @@ div[data-testid="stLayoutWrapper"]:has(.settings-panel-title) .st-key-settings_o
 
 /* Comparison / chunk block styling: wide, matching background, subtle gray underline */
 .cmp-block {
-    width: 100%;
-    box-sizing: border-box;
-    background: transparent;
-    padding: 0.03rem 0.12rem;
-    margin-bottom: 0;
-    border-bottom: 1px solid #334155;
-    border-radius: 8px;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    background: transparent !important;
+    padding: 0.03rem 0.12rem !important;
+    margin-bottom: 0 !important;
+    /* CHANGE: Swapped hardcoded #334155 for variable */
+    border-bottom: 1px solid var(--border-color) !important;
+    border-radius: 8px !important;
 }
 .cmp-block .chunk-text-content {
     background: transparent;
@@ -948,9 +943,10 @@ div[data-testid="stElementContainer"][class*="st-key-scan_toggle_"] {
 div[data-testid="stElementContainer"][class*="st-key-cmp_toggle_"] .stButton > button,
 div[data-testid="stElementContainer"][class*="st-key-scan_toggle_"] .stButton > button {
     width: 100% !important;
-    background: #0f172a !important;
-    color: #e2e8f0 !important;
-    border: 1px solid #334155 !important;
+    /* CHANGE: Dynamic background for collapsible toggles */
+    background: var(--bg-surface) !important;
+    color: var(--text-main) !important;
+    border: 1px solid var(--border-color) !important;
     box-shadow: none !important;
     text-align: left !important;
     padding: 0.55rem 0.8rem !important;
@@ -998,3 +994,30 @@ div[data-testid="stElementContainer"] > div.stMarkdown:empty {
     border: none !important;
     padding: 0.08rem 0.18rem !important;
 }
+
+/* ==========================================================================
+   THEME SWITCH & SIDEBAR CLEANUP OVERRIDES
+   ========================================================================== */
+
+/* Ensure sidebar surface also picks up the custom theme tokens */
+[data-testid="stSidebar"] {
+    background-color: var(--bg-surface) !important;
+    border-right: 1px solid var(--border-color) !important;
+}
+
+/* Ensure inputs, textareas, and dropdown selection boxes use theme variables */
+.stTextInput input,
+.stTextArea textarea,
+.stSelectbox [data-baseweb="select"],
+.stMultiSelect [data-baseweb="select"] {
+    background-color: var(--bg-surface) !important;
+    color: var(--text-main) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Hide native Streamlit settings, menus, and toolbar overrides entirely */
+#MainMenu { visibility: hidden !important; }
+[data-testid="stToolbar"] { display: none !important; }
+button[title="Settings"] { display: none !important; }
+[data-testid="stDeployButton"],
+[data-testid="baseButton-headerNoPadding"] { display: none !important; }

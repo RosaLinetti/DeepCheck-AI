@@ -16,7 +16,11 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# Initialize trackable data dictionaries
 init_session_state()
+
+# ── FIX: Inject custom theme loader straight into the render thread ──
+load_css()
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 st.sidebar.markdown(
@@ -44,6 +48,3 @@ elif mode == "db":
     render_scan_page()
 else:
     render_library_page()
-
-# Inject CSS after Streamlit's generated styles so our rules take precedence
-load_css()

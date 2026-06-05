@@ -2,6 +2,7 @@ import os
 import streamlit as st
 import requests
 
+# ── API ENDPOINTS ─────────────────────────────────────────────────────────────
 API_BASE = "http://127.0.0.1:8000"
 UNIFIED_ENDPOINT = f"{API_BASE}/document/analyze"
 SEARCH_ENDPOINT  = f"{API_BASE}/document/analyze/search"
@@ -13,68 +14,279 @@ DELETE_ENDPOINT  = f"{API_BASE}/document/delete"
 ALLOWED_EXTENSIONS = ["pdf", "txt", "docx"]
 
 
-def load_css():
-    css_path = os.path.join(os.path.dirname(__file__), "..", "assets", "styles.css")
-    try:
-        with open(css_path) as f:
-            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-    except Exception as e:
-        st.warning(f"Could not load CSS: {e}")
-    
-    # Theme injection: Apply light theme class if selected
-    if st.session_state.get("theme") == "light":
-        st.markdown(
-            '<script>try{document.querySelector(".stApp").classList.add("light-theme");}catch(e){}</script>',
-            unsafe_allow_html=True
-        )
-        st.markdown('<div class="light-theme">', unsafe_allow_html=True)
-    else:
-        st.markdown(
-            '<script>try{document.querySelector(".stApp").classList.remove("light-theme");}catch(e){}</script>',
-            unsafe_allow_html=True
-        )
-
-
+# ── THEME & SETUP LOGIC ───────────────────────────────────────────────────────
 def init_session_state():
+    """Initializes global data arrays and state variables uniformly."""
     defaults = {
-        "results": None,
-        "search_results": None,
-        "chunk_strategy": "sentence",
-        "window_size": 30,
-        "overlap": 10,
-        "algorithm_mode": "semantic",
-        "settings_open": False,
-        "dc_css_loaded": False,
-        "current_mode": "1v1",
-        "theme": "dark",
+        "results":          None,
+        "search_results":   None,
+        "chunk_strategy":   "sentence",
+        "window_size":      30,
+        "overlap":          10,
+        "algorithm_mode":   "semantic",
+        "settings_open":    False,
+        "dc_css_loaded":    False,
+        "current_mode":     "1v1",
+        "theme":            "dark",
+        "_theme_toggle":    False,   # Mirrors theme default initialization (Dark = False)
     }
     for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v
 
 
+def inject_theme_css():
+    """
+    Injects :root token overrides AND Streamlit-specific selector fixes
+    on every render. Only the light block does real work; dark is a no-op
+    since :root already defaults to dark values in styles.css.
+    """
+    if st.session_state.get("theme") != "light":
+        st.markdown("<style>/* dark — :root defaults active */</style>",
+                    unsafe_allow_html=True)
+        return
+    light_css = """
+    <style>
+    /* ── 1. Root token override ─────────────────────────────────────── */
+    :root {
+        --bg-main:      #f1f5f9 !important;
+        --bg-surface:   #ffffff !important;
+        --text-main:    #0f172a !important;
+        --text-muted:   #475569 !important;
+        --border-color: #cbd5e1 !important;
+    }
+    /* ── 2. App + sidebar surfaces ──────────────────────────────────── */
+    .stApp,
+    .stApp > div,
+    section.main,
+    .block-container {
+        background-color: var(--bg-main) !important;
+        color: var(--text-main) !important;
+    }
+    [data-testid="stSidebar"],
+    [data-testid="stSidebar"] > div {
+        background-color: #ffffff !important;
+        border-right: 1px solid var(--border-color) !important;
+    }
+    /* ── 3. Global text — every Streamlit markdown/paragraph node ───── */
+    .stApp p,
+    .stApp span,
+    .stApp li,
+    .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6,
+    .stMarkdown, .stMarkdown p, .stMarkdown span,
+    div[data-testid="stMarkdownContainer"],
+    div[data-testid="stMarkdownContainer"] p,
+    div[data-testid="stMarkdownContainer"] span,
+    div[data-testid="stMarkdownContainer"] strong,
+    div[data-testid="stMarkdownContainer"] li {
+        color: var(--text-main) !important;
+    }
+    /* ── 4. Page header brand text ──────────────────────────────────── */
+    .dc-brand-name { color: #2563eb !important; }
+    .dc-brand-sub  { color: #475569 !important; }
+    /* ── 5. Custom HTML component text (panel-label, chart-header) ──── */
+    .panel-label,
+    .chart-header,
+    .banner-title  { color: var(--text-main) !important; }
+    .banner-sub,
+    .threshold-label { color: var(--text-muted) !important; }
+    .chart-header  { color: var(--text-main) !important; }
+    /* page-scan overrides its own panel-label to #e6eefc — flip it */
+    .page-scan .panel-label,
+    .page-scan .chart-header { color: var(--text-main) !important; }
+    /* ── 6. Sidebar widget labels ────────────────────────────────────── */
+    [data-testid="stSidebar"] label,
+    [data-testid="stSidebar"] label span,
+    [data-testid="stSidebar"] p,
+    [data-testid="stSidebar"] .stRadio label,
+    [data-testid="stSidebar"] .stRadio label span,
+    [data-testid="stSidebar"] [data-testid="stWidgetLabel"],
+    [data-testid="stSidebar"] [data-testid="stWidgetLabel"] p,
+    [data-testid="stSidebar"] .stMarkdown p,
+    [data-testid="stSidebar"] .stCaption,
+    [data-testid="stSidebar"] .stCaption p {
+        color: var(--text-main) !important;
+    }
+    /* Sidebar caption is intentionally slightly muted */
+    [data-testid="stSidebar"] [data-testid="stCaptionContainer"] p {
+        color: var(--text-muted) !important;
+    }
+    /* Sidebar toggle label */
+    [data-testid="stSidebar"] [data-testid="stToggle"] label,
+    [data-testid="stSidebar"] [data-testid="stToggle"] p {
+        color: var(--text-main) !important;
+    }
+    /* Radio option labels inside sidebar */
+    [data-testid="stSidebar"] [role="radiogroup"] label {
+        color: #334155 !important;
+    }
+    [data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) {
+        color: #2563eb !important;
+        background: rgba(37, 99, 235, 0.08) !important;
+    }
+    /* ── 7. Main area widget labels ──────────────────────────────────── */
+    label,
+    label span,
+    [data-testid="stWidgetLabel"],
+    [data-testid="stWidgetLabel"] p,
+    .stSlider label,
+    .stSlider label p,
+    .stRadio label,
+    .stRadio label span,
+    .stMultiSelect label,
+    .stSelectbox label,
+    .stTextInput label,
+    .stTextArea label,
+    .stNumberInput label {
+        color: var(--text-main) !important;
+    }
+    /* st.caption */
+    [data-testid="stCaptionContainer"] p { color: var(--text-muted) !important; }
+    /* ── 8. Metric widget ─────────────────────────────────────────────── */
+    [data-testid="stMetricLabel"] p,
+    [data-testid="stMetricLabel"] label,
+    [data-testid="stMetricValue"]    { color: var(--text-main) !important; }
+    [data-testid="stMetricDelta"]    { color: var(--text-muted) !important; }
+    /* ── 9. Inputs / textareas / selects ────────────────────────────── */
+    .stTextInput input,
+    .stNumberInput input,
+    .stTextArea textarea {
+        background-color: #ffffff !important;
+        color: var(--text-main) !important;
+        border-color: var(--border-color) !important;
+    }
+    .stTextInput input::placeholder,
+    .stTextArea textarea::placeholder {
+        color: #94a3b8 !important;
+    }
+    .stSelectbox [data-baseweb="select"] > div,
+    .stMultiSelect [data-baseweb="select"] > div {
+        background-color: #ffffff !important;
+        border-color: var(--border-color) !important;
+        color: var(--text-main) !important;
+    }
+    /* Dropdown menu that renders in a portal outside .stApp */
+    [data-baseweb="popover"] [data-baseweb="menu"],
+    [data-baseweb="popover"] [role="option"] {
+        background: #ffffff !important;
+        color: var(--text-main) !important;
+    }
+    /* ── 10. File uploader — full light-mode restyle ────────────────── */
+    div[data-testid="stFileUploader"] {
+        background: #f8fafc !important;
+        border: 1px solid var(--border-color) !important;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.06) !important;
+    }
+    div[data-testid="stFileUploader"] section[data-testid="stFileUploaderDropzone"] {
+        background: #ffffff !important;
+        border: 1px dashed #93c5fd !important;
+    }
+    div[data-testid="stFileUploader"] section[data-testid="stFileUploaderDropzone"]:hover {
+        background: #eff6ff !important;
+        border-color: #3b82f6 !important;
+    }
+    /* The ::before / ::after pseudo-elements carry the upload copy */
+    div[data-testid="stFileUploader"] section[data-testid="stFileUploaderDropzone"]::before {
+        color: #1e40af !important;
+    }
+    div[data-testid="stFileUploader"] section[data-testid="stFileUploaderDropzone"]::after {
+        color: #475569 !important;
+    }
+    /* Any surviving native Streamlit upload instruction text */
+    div[data-testid="stFileUploader"] [data-testid="stFileUploaderDropzoneInstructions"] span,
+    div[data-testid="stFileUploader"] small {
+        color: var(--text-muted) !important;
+    }
+    /* ── 11. Expander ───────────────────────────────────────────────── */
+    .streamlit-expanderHeader,
+    .streamlit-expanderHeader p,
+    [data-testid="stExpanderToggleIcon"] { color: var(--text-main) !important; }
+    [data-testid="stExpander"] { border-color: var(--border-color) !important; }
+    /* ── 12. Slider track & thumb ───────────────────────────────────── */
+    [data-baseweb="slider"] [data-testid="stSliderTrack"] {
+        background-color: var(--border-color) !important;
+    }
+    [data-baseweb="slider"] [role="slider"] {
+        background: #3b82f6 !important;
+        border-color: #3b82f6 !important;
+    }
+    [data-testid="stSliderTickBarMin"],
+    [data-testid="stSliderTickBarMax"] { color: var(--text-muted) !important; }
+    /* ── 13. st.info / st.success / st.warning / st.error boxes ──────── */
+    [data-testid="stAlert"] { color: var(--text-main) !important; }
+    [data-testid="stAlert"] p { color: var(--text-main) !important; }
+    /* ── 14. Multiselect pills ──────────────────────────────────────── */
+    [data-baseweb="tag"] {
+        background: #dbeafe !important;
+        color: #1e40af !important;
+    }
+    [data-baseweb="tag"] span { color: #1e40af !important; }
+    /* ── 15. Chunk toggle buttons (cmp + scan) ──────────────────────── */
+    div[data-testid="stElementContainer"][class*="st-key-cmp_toggle_"] .stButton > button,
+    div[data-testid="stElementContainer"][class*="st-key-scan_toggle_"] .stButton > button {
+        background: #ffffff !important;
+        color: #0f172a !important;
+        border: 1px solid var(--border-color) !important;
+    }
+    div[data-testid="stElementContainer"][class*="st-key-cmp_toggle_"] .stButton > button:hover,
+    div[data-testid="stElementContainer"][class*="st-key-scan_toggle_"] .stButton > button:hover {
+        background: #f1f5f9 !important;
+        border-color: #94a3b8 !important;
+    }
+    /* ── 16. db-stat-mono and hardcoded-color utility classes ───────── */
+    .db-stat-mono  { color: #3b82f6 !important; }
+    .empty-state   { color: #475569 !important; }
+    .empty-state h3 { color: #334155 !important; }
+    /* ── 17. Active tab ─────────────────────────────────────────────── */
+    .stTabs [aria-selected="true"] {
+        background: #eff6ff !important;
+        color: #2563eb !important;
+    }
+    .stTabs [data-baseweb="tab"] { color: #475569 !important; }
+    /* ── 18. Spinner text ───────────────────────────────────────────── */
+    [data-testid="stSpinner"] p { color: var(--text-main) !important; }
+    /* ── 19. Number input arrows ────────────────────────────────────── */
+    .stNumberInput button { color: var(--text-main) !important; }
+    </style>
+    """
+    st.markdown(light_css, unsafe_allow_html=True)
+
+
+def load_css():
+    """Reads the local stylesheet and applies the theme cascade."""
+    css_path = os.path.join(os.path.dirname(__file__), "..", "assets", "styles.css")
+    try:
+        with open(css_path) as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+    except Exception as e:
+        st.warning(f"Could not load custom CSS layout: {e}")
+    
+    # Always inject variable tokens right after the base stylesheet
+    inject_theme_css()
+
+
+def _on_theme_change():
+    """Synchronous callback handler to cycle values cleanly before render loops."""
+    st.session_state.theme = "light" if st.session_state._theme_toggle else "dark"
+
+
 def render_sidebar_navigation():
-    # Theme toggle
-    theme_mode = st.sidebar.toggle(
-        label="Light Mode" if st.session_state.theme == "dark" else "Dark Mode",
-        value=st.session_state.theme == "light",
-        key="theme_toggle"
+    """Renders the custom emoji theme toggle and the main route selectors."""
+    is_light = st.session_state.theme == "light"
+    toggle_label = "☀️ Switch to Light Mode" if not is_light else "🌙 Switch to Dark Mode"
+    
+    # Theme selector widget with state-locked callback
+    st.sidebar.toggle(
+        toggle_label,
+        value=is_light,
+        key="_theme_toggle",
+        on_change=_on_theme_change,
     )
     
-    if theme_mode:
-        if st.session_state.theme != "light":
-            st.session_state.theme = "light"
-            st.rerun()
-    else:
-        if st.session_state.theme != "dark":
-            st.session_state.theme = "dark"
-            st.rerun()
-    
-    # Display active theme indicator
     if st.session_state.theme == "light":
-        st.sidebar.markdown("☀️ **Light Mode Active**", help="Switch to Dark Mode")
+        st.sidebar.caption("☀️ Light mode active")
     else:
-        st.sidebar.markdown("🌙 **Dark Mode Active**", help="Switch to Light Mode")
+        st.sidebar.caption("🌙 Dark mode active")
     
     st.sidebar.markdown("---")
     
@@ -82,8 +294,8 @@ def render_sidebar_navigation():
         "Select Analysis Mode",
         ["1v1", "db", "library"],
         format_func=lambda x: {
-            "1v1": "1v1 Document Comparison",
-            "db": "ChromaDB Knowledge Base Scan",
+            "1v1":     "1v1 Document Comparison",
+            "db":      "ChromaDB Knowledge Base Scan",
             "library": "Index Library",
         }[x],
         key="nav_mode",
@@ -92,6 +304,21 @@ def render_sidebar_navigation():
     return mode
 
 
+def plotly_theme_layout():
+    """Generates real-time map overrides to keep charts in sync with global theme states."""
+    is_light = st.session_state.get("theme") == "light"
+    font_color = "#0f172a" if is_light else "#f8fafc"
+    grid_color = "#e2e8f0" if is_light else "#334155"
+    return dict(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color=font_color, family="Space Grotesk, Inter, sans-serif"),
+        xaxis=dict(gridcolor=grid_color, zerolinecolor=grid_color),
+        yaxis=dict(gridcolor=grid_color, zerolinecolor=grid_color),
+    )
+
+
+# ── COMPONENT RENDERING CARDS ─────────────────────────────────────────────────
 def render_advanced_settings_sidebar():
     with st.sidebar.expander("Advanced Token Settings", expanded=False):
         strategy = st.radio(
@@ -116,7 +343,6 @@ def render_advanced_settings_sidebar():
 
 def render_algorithm_selector():
     st.markdown("**Detection Algorithm**")
-
     algo = st.radio(
         "Select processing method",
         ["semantic", "traditional"],
@@ -127,7 +353,6 @@ def render_algorithm_selector():
         horizontal=True,
         key="algo_selector",
     )
-
     st.session_state.algorithm_mode = algo
     return algo
 
@@ -138,7 +363,6 @@ def render_db_status_cards(stats, title="Vector Database Status"):
         return
 
     st.markdown(f"**{title}**")
-
     c1, c2, c3 = st.columns(3)
     with c1:
         st.metric("Indexed Documents", stats.get("total_documents", 0))
@@ -169,7 +393,6 @@ def render_verdict_banner(overall_sim: float, is_1v1: bool = True):
         )
 
     st.metric("Similarity Score", f"{round(overall_sim*100,1)}%")
-
     st.markdown(f"""
     <div class="verdict-banner {cls}">
         <div>
@@ -182,13 +405,11 @@ def render_verdict_banner(overall_sim: float, is_1v1: bool = True):
 
 def render_kpi_cards(overall_sim, max_sim, total_chunks):
     c1, c2, c3 = st.columns(3)
-
     data = [
         ("Overall Similarity", f"{round(overall_sim*100,1)}%", c1),
         ("Max Similarity", f"{round(max_sim*100,1)}%", c2),
         ("Total Segments", str(total_chunks), c3),
     ]
-
     for label, value, col in data:
         with col:
             st.markdown(f"**{label}**")
@@ -222,44 +443,32 @@ def verdict_badge_html(verdict):
 
 
 def highlight_matching_segments(text, reference, confidence):
-    """
-    Renders a pro-grade AI checker heatmap with dynamic opacity based on confidence.
-    confidence < 0.4: returns text unstyled
-    0.4 <= confidence < 0.7: amber/yellow tint with left border
-    confidence >= 0.7: rose/red tint with left border
-    """
+    """Renders an AI checker heatmap with dynamic opacity based on confidence."""
     if confidence < 0.4:
         return text
     
-    # Determine color and opacity based on confidence level
     if confidence >= 0.7:
-        # Plagiarised (high match) - Rose/Red
-        color_rgb = "244, 63, 94"  # rgba(244, 63, 94, ...)
+        color_rgb = "244, 63, 94"
         border_color = "#f43f5e"
     else:
-        # Suspicious (medium match) - Amber/Yellow
-        color_rgb = "234, 179, 8"  # rgba(234, 179, 8, ...)
+        color_rgb = "234, 179, 8"
         border_color = "#eab308"
     
-    # Scale opacity dynamically: confidence 0.4-0.7 maps to 0.3-0.6, confidence 0.7+ maps to 0.6-0.9
     if confidence >= 0.7:
         alpha = min(0.9, 0.6 + (confidence - 0.7) * 0.5)
     else:
         alpha = 0.3 + (confidence - 0.4) * (0.6 - 0.3) / 0.3
     
-    # Create a subtle left border highlight with background tint
     highlighted_html = f'<span style="background-color: rgba({color_rgb}, {alpha:.2f}); border-left: 4px solid {border_color}; padding-left: 4px; display: inline;">{text}</span>'
     return highlighted_html
 
 
-# ---------------- API CALLS ----------------
-
+# ── BACKEND API CONNECTIONS ───────────────────────────────────────────────────
 def call_unified_api(source_text, suspicious_text, source_file, suspicious_file):
     data = {
         "chunk_strategy": st.session_state.chunk_strategy,
         "algorithm": st.session_state.algorithm_mode,
     }
-
     files = {}
 
     if source_file:
@@ -273,10 +482,8 @@ def call_unified_api(source_text, suspicious_text, source_file, suspicious_file)
         data["suspicious_text"] = suspicious_text
 
     resp = requests.post(UNIFIED_ENDPOINT, data=data, files=files or None, timeout=120)
-
     if not resp.ok:
         raise Exception(resp.text)
-
     return resp.json()
 
 
@@ -286,31 +493,21 @@ def call_chroma_search_api(file, top_k=5):
         "top_k": top_k,
         "algorithm": st.session_state.algorithm_mode,
     }
-
-    files = {
-        "file": (file.name, file.getvalue(), file.type)
-    }
+    files = {"file": (file.name, file.getvalue(), file.type)}
 
     resp = requests.post(SEARCH_ENDPOINT, data=data, files=files, timeout=120)
-
     if not resp.ok:
         raise Exception(resp.text)
-
     return resp.json()
 
 
 def call_chroma_ingest_api(file):
     data = {"chunk_strategy": st.session_state.chunk_strategy}
-
-    files = {
-        "file": (file.name, file.getvalue(), file.type)
-    }
+    files = {"file": (file.name, file.getvalue(), file.type)}
 
     resp = requests.post(INGEST_ENDPOINT, data=data, files=files, timeout=120)
-
     if not resp.ok:
         raise Exception(resp.text)
-
     return resp.json()
 
 
